@@ -8,6 +8,7 @@ import { getThingsVisHomeDashboard, type ThingsVisHomeDashboard } from '@/servic
 import type { ICardRender, ICardView } from '@/components/panel/card'
 import { localStg } from '@/utils/storage'
 import { $t } from '@/locales'
+import CardRender from '@/components/panel/ui/card-render.vue'
 import ThingsVisAppFrame from '@/components/thingsvis/ThingsVisAppFrame.vue'
 import { useAuthStore } from '@/store/modules/auth'
 import { clearThingsVisHomeCache, readThingsVisHomeCache, writeThingsVisHomeCache } from '@/utils/thingsvis/home-cache'
@@ -38,30 +39,52 @@ function isCompleteThingsVisDashboard(dashboard?: ThingsVisHomeDashboard | null)
   return true
 }
 
+// 检查 ThingsVis 服务是否可用
+const checkThingsVisAvailable = async (): Promise<boolean> => {
+  try {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 3000)
+    const response = await fetch('/thingsvis-api/health', {
+      method: 'GET',
+      signal: controller.signal
+    })
+    clearTimeout(timeoutId)
+    return response.ok
+  } catch {
+    return false
+  }
+}
+
 // ThingsVis 请求失败时的重试状态（针对超管首次登录场景）
 const thingsVisRetryCount = ref(0)
 const MAX_THINGSVIS_RETRY = 5 // 增加到 5 次重试
 
 const loadLegacyHome = async () => {
+  console.log('[Home] loadLegacyHome 开始')
   const { data, error } = await fetchHomeData({})
+  console.log('[Home] fetchHomeData 返回, data:', !!data, 'error:', error)
 
   isError.value = (error || !(data && data.config)) as boolean
   if (isError.value) {
+    console.log('[Home] fetchHomeData 错误, isError:', isError.value)
     layoutFetched.value = true
     return
   }
 
   if (data) {
     const configJson = JSON.parse(data.config)
+    console.log('[Home] configJson 类型:', Array.isArray(configJson) ? 'array' : typeof configJson)
     if (Array.isArray(configJson)) {
       updateConfigData(configJson)
       layout.value = [...configJson, ...layout.value]
       layoutFetched.value = true
+      console.log('[Home] 设置 array layout, length:', layout.value.length)
     } else if (typeof configJson === 'object') {
       if (configJson.layout) {
         updateConfigData(configJson.layout)
         layout.value = configJson.layout
         layoutFetched.value = true
+        console.log('[Home] 设置 object layout, length:', layout.value.length)
       }
       if (configJson.theme) {
         theme.value = configJson.theme
@@ -101,7 +124,19 @@ const getLayout = async (retryCount = 0) => {
     return
   }
 
-  // 先检查 ThingsVis 是否有首页的仪表盘
+  // 先检查 ThingsVis 服务是否可用
+  const thingsVisAvailable = await checkThingsVisAvailable()
+  console.log('[Home] ThingsVis 服务可用性:', thingsVisAvailable)
+
+  if (!thingsVisAvailable) {
+    console.log('[Home] ThingsVis 服务不可用，使用原看板')
+    writeThingsVisHomeCache('classic')
+    await loadLegacyHome()
+    console.log('[Home] loadLegacyHome 完成, layoutFetched:', layoutFetched.value, 'layout length:', layout.value.length)
+    return
+  }
+
+  // ThingsVis 服务可用，检查是否有首页的仪表盘
   try {
     console.log('[Home] 尝试获取 ThingsVis 首页...')
     isThingsVisLoading.value = true
@@ -120,45 +155,15 @@ const getLayout = async (retryCount = 0) => {
       return
     }
 
-    // ThingsVis 请求成功但没有数据，可能是首次登录看板尚未创建
-    // 等待一下再重试
-    if (homeNotConfigured && isSysAdmin.value && retryCount < MAX_THINGSVIS_RETRY) {
-      thingsVisRetryCount.value = retryCount + 1
-      console.log(
-        `[Home] 超管首页未配置，等待 ${500 * (retryCount + 1)}ms 后重试... (${retryCount + 1}/${MAX_THINGSVIS_RETRY})`
-      )
-      await new Promise(resolve => setTimeout(resolve, 500 * (retryCount + 1)))
-      return getLayout(retryCount + 1)
-    }
-
-    if (isSysAdmin.value) {
-      if (!homeNotConfigured && thingsVisResult.error) {
-        isError.value = true
-        layoutFetched.value = true
-        return
-      }
-
-      console.log('[Home] 超管空间暂无首页，显示超管首页配置引导')
-      showSysAdminSetup.value = true
-      layoutFetched.value = true
-      thingsVisRetryCount.value = 0
-      writeThingsVisHomeCache('sysadmin-setup')
-      return
-    }
-
+    // ThingsVis 服务可用但没有配置首页，使用原看板
     console.log('[Home] ThingsVis 没有设置首页，使用原看板')
     if (homeNotConfigured) {
       writeThingsVisHomeCache('classic')
     }
   } catch (e) {
-    // ThingsVis 服务不可用，继续使用原来的看板
+    // ThingsVis 服务错误，使用原看板
     console.log('[Home] ThingsVis 服务错误，使用原看板:', e)
     isThingsVisLoading.value = false
-    if (isSysAdmin.value) {
-      isError.value = true
-      layoutFetched.value = true
-      return
-    }
   }
 
   // 使用原来的看板首页
@@ -289,6 +294,19 @@ const breakpointChanged = (_newBreakpoint: any, newLayout: any) => {
     :schema="thingsVisHome"
     mode="viewer"
     class="h-full w-full"
+  />
+
+  <!-- Legacy 传统看板 -->
+  <CardRender
+    v-else-if="layoutFetched"
+    ref="cr"
+    class="home-panel"
+    :layout="layout"
+    :is-preview="true"
+    :col-num="12"
+    :default-card-col="4"
+    :row-height="85"
+    :theme="theme"
   />
 </template>
 
