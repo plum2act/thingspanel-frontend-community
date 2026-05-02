@@ -5,16 +5,21 @@ import type { ICardData, ICardView } from '@/components/panel/card'
 import './gird.css'
 import { $t } from '@/locales'
 
-const props = defineProps<{
-  layout: ICardView[]
-  colNum: number
-  defaultCardCol: number
-  rowHeight: number
-  isPreview?: boolean
-  breakpoints?: any
-  cols?: any
-  theme?: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    layout?: ICardView[]
+    colNum: number
+    defaultCardCol: number
+    rowHeight: number
+    isPreview?: boolean
+    breakpoints?: any
+    cols?: any
+    theme?: string
+  }>(),
+  {
+    layout: () => []
+  }
+)
 
 const cardRefs = reactive<{ [key: string]: any | undefined }>({})
 
@@ -101,9 +106,10 @@ defineExpose({
 })
 
 const removeLayout = (i: number) => {
+  const currentLayout = props.layout || []
   emit(
     'update:layout',
-    props.layout.filter(item => item.i !== i)
+    currentLayout.filter(item => item.i !== i)
   )
 }
 const breakpointChanged = (newBreakpoint: any, newLayout: any) => {

@@ -24,19 +24,17 @@ async function fetchVersionInfo(): Promise<VersionInfoSnapshot> {
   if (versionInfoPending) return versionInfoPending
 
   versionInfoPending = Promise.allSettled([
-    getSysVersion(),
-    axios.get('https://api.github.com/repos/ThingsPanel/thingspanel-frontend-community/tags')
+    getSysVersion()
+    // GitHub API 已禁用，避免 403 错误
+    // axios.get('https://api.github.com/repos/ThingsPanel/thingspanel-frontend-community/tags')
   ])
-    .then(([currentResult, latestResult]) => {
+    .then(([currentResult]) => {
       const currentVersion =
         currentResult.status === 'fulfilled'
           ? normalizeVersion(currentResult.value?.data?.version)
           : DEFAULT_VERSION
 
-      const latestVersion =
-        latestResult.status === 'fulfilled'
-          ? normalizeVersion(latestResult.value?.data?.[0]?.name)
-          : DEFAULT_VERSION
+      const latestVersion = DEFAULT_VERSION // GitHub API 已禁用
 
       versionInfoCache = {
         currentVersion,

@@ -53,10 +53,12 @@ export const getDemoServerUrl = (): string => {
  */
 export const getWebsocketServerUrl = (): string => {
   const demoUrl = getDemoServerUrl()
-  if (window.location.protocol === 'https:') {
-    return demoUrl.replace(window.location.protocol, 'wss:')
+  let wsUrl = demoUrl.replace(window.location.protocol, window.location.protocol === 'https:' ? 'wss:' : 'ws:')
+  // 添加 /api/v1 前缀（WebSocket 路径需要完整路径）
+  if (!wsUrl.includes('/api/v1')) {
+    wsUrl = wsUrl.replace(/(\/)$/, '') + '/api/v1'
   }
-  return demoUrl.replace(window.location.protocol, 'ws:')
+  return wsUrl
 }
 
 export function deepClone(data: any): any {
