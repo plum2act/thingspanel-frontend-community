@@ -1,22 +1,22 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-import type { Component } from 'vue'
+import { loginModuleRecord } from '@/constants/app'
+import { $t } from '@/locales'
+import { fetchTenantSetupState } from '@/service/api/auth'
+import { useAppStore } from '@/store/modules/app'
+import { useSysSettingStore } from '@/store/modules/sys-setting'
+import { useThemeStore } from '@/store/modules/theme'
 import { useTitle } from '@vueuse/core'
 import { NEllipsis, NSpin } from 'naive-ui'
-import { $t } from '@/locales'
-import { useAppStore } from '@/store/modules/app'
-import { useThemeStore } from '@/store/modules/theme'
-import { loginModuleRecord } from '@/constants/app'
-import { useSysSettingStore } from '@/store/modules/sys-setting'
-import { fetchTenantSetupState } from '@/service/api/auth'
-import PwdLogin from './modules/pwd-login.vue'
+import type { Component } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import BindWechat from './modules/bind-wechat.vue'
 import CodeLogin from './modules/code-login.vue'
-import Register from './modules/register.vue'
+import LoginBg from './modules/login-bg.vue'
+import PwdLogin from './modules/pwd-login.vue'
 import RegisterByEmail from './modules/register-email.vue'
 import RegisterSuperAdmin from './modules/register-super-admin.vue'
+import Register from './modules/register.vue'
 import ResetPwd from './modules/reset-pwd.vue'
-import BindWechat from './modules/bind-wechat.vue'
-import LoginBg from './modules/login-bg.vue'
 
 interface Props {
   /** The login module */
@@ -63,7 +63,7 @@ const modules: LoginModule[] = [
   { key: 'bind-wechat', label: loginModuleRecord['bind-wechat'], component: BindWechat }
 ]
 
-const fallbackMarketUrl = import.meta.env.VITE_MARKET_URL || 'https://r.thingspanel.cn'
+const fallbackMarketUrl = import.meta.env.VITE_MARKET_URL || ''
 
 const normalizeMarketUrl = (baseUrl?: string) => {
   const url = baseUrl?.trim()

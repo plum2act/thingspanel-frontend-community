@@ -3,7 +3,7 @@
  * 实现组件的懒加载和缓存管理
  */
 
-import type { IComponentLoader, IComponentDefinition } from '../types/component'
+import type { IComponentDefinition, IComponentLoader } from '../types/component'
 import { componentRegistry } from './index'
 
 /**
@@ -249,7 +249,7 @@ export class ComponentLoader implements IComponentLoader {
       'reported-data',
       'tenant-chart',
       'operation-guide',
-      'app-download',
+      // 'app-download',
       'online-status',
       'offline-status'
     ]

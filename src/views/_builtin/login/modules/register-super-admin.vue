@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, watch } from 'vue'
-import { NAutoComplete, NButton, NForm, NFormItem, NInput } from 'naive-ui'
-import { $t } from '@/locales'
 import { useFormRules, useNaiveForm } from '@/hooks/common/form'
-import { useAuthStore } from '@/store/modules/auth'
+import { $t } from '@/locales'
 import { fetchSuperAdminInit } from '@/service/api/auth'
+import { useAuthStore } from '@/store/modules/auth'
+import { NAutoComplete, NButton, NForm, NFormItem, NInput } from 'naive-ui'
+import { computed, onMounted, reactive, watch } from 'vue'
 
 defineOptions({
   name: 'SuperAdminRegisterPage'
@@ -26,7 +26,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const auth = useAuthStore()
 const { formRef, validate } = useNaiveForm()
-const fallbackMarketUrl = import.meta.env.VITE_MARKET_URL || 'https://r.thingspanel.cn'
+const fallbackMarketUrl = import.meta.env.VITE_MARKET_URL || ''
 
 interface FormModel {
   email: string
