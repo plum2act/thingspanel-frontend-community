@@ -13,15 +13,14 @@ withDefaults(defineProps<Props>(), {
 
 <template>
   <!-- <IconLocalLogo /> -->
-  <div :style="{ height: width + 'rpx' }">
-    <!--  v-if="sysSettingStore.logo_background"  -->
-    <!-- {{sysSettingStore  }} -->
-    <n-image
-      :width="width"
-      :src="sysSettingStore.logo_background === '' ? '/favicon.svg' : sysSettingStore.logo_background"
-    />
-    <!-- <v-else icon-local-logo /> -->
-  </div>
+  <n-image
+    :width="width"
+    :src="sysSettingStore.logo_background === '' ? '/logo.png' : sysSettingStore.logo_background"
+  />
 </template>
 
-<style scoped></style>
+<style scoped>
+:deep(.n-image > img) {
+  height: auto;
+}
+</style>

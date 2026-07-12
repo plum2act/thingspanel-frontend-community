@@ -105,7 +105,7 @@ const mobileTitle = computed(() => {
   if (route.meta?.title) {
     return route.meta.title as string
   }
-  return 'ThingsPanel'
+  return '零碳园区物联网平台'
 })
 
 // 是否显示返回按钮

@@ -279,12 +279,7 @@ watch(moduleTitle, newTitle => {
 
       <!-- Logo区域 -->
       <div class="text-center mb-6">
-        <div
-          class="inline-flex items-center justify-center w-12 h-12 rounded-xl mb-3 shadow-lg transition-transform duration-300 hover:scale-110"
-          :style="{ background: themeStore.themeColor }"
-        >
-          <SystemLogo width="32" class="text-white" />
-        </div>
+        <SystemLogo width="200" class="login-logo mx-auto" />
         <div class="title-container">
           <n-ellipsis
             :line-clamp="2"
