@@ -20,6 +20,9 @@ import DeviceDiagnosis from '@/views/device/details/modules/device-diagnosis.vue
 import { $t } from '@/locales'
 import { useAppStore } from '@/store/modules/app'
 import { deviceAlarmStatus, deviceDetail, deviceUpdate } from '@/service/api/device'
+import { useTheme } from '@/components/ux/useTheme'
+import UxPageHeader from '@/components/ux/UxPageHeader.vue'
+import UxStatusBadge from '@/components/ux/UxStatusBadge.vue'
 import { localStg } from '@/utils/storage'
 import { useRouterPush } from '@/hooks/common/router'
 import { getWebsocketServerUrl } from '@/utils/common/tool'
@@ -37,93 +40,146 @@ const getDeviceId = () => {
 
 const { loading, startLoading, endLoading } = useLoading()
 
+type TabCategory = 'live' | 'device' | 'communication' | 'alarm' | 'settings'
+
 type TabComponent = {
   key: string
   name: () => string
   component: any
   refreshKey: number
+  category: TabCategory
 }
+
+interface TabCategoryDef {
+  key: TabCategory
+  label: string
+  icon: string
+}
+
+const { palette } = useTheme()
 
 const baseComponents: TabComponent[] = [
   {
     key: 'chart',
     name: () => $t('custom.device_details.chart'),
     component: markRaw(TelemetryChart),
-    refreshKey: 0
+    refreshKey: 0,
+    category: 'live'
   },
   {
     key: 'telemetry',
     name: () => $t('custom.device_details.telemetry'),
     component: markRaw(Telemetry),
-    refreshKey: 0
+    refreshKey: 0,
+    category: 'live'
   },
   {
     key: 'join',
     name: () => $t('custom.device_details.join'),
     component: markRaw(Join),
-    refreshKey: 0
+    refreshKey: 0,
+    category: 'device'
   },
   {
     key: 'device-analysis',
     name: () => $t('custom.device_details.subdevice'),
     component: markRaw(DeviceAnalysis),
-    refreshKey: 0
+    refreshKey: 0,
+    category: 'device'
   },
   {
     key: 'message',
     name: () => $t('custom.device_details.AdditionalDetails'),
     component: markRaw(Message),
-    refreshKey: 0
+    refreshKey: 0,
+    category: 'device'
   },
   {
     key: 'stats',
     name: () => $t('custom.device_details.attributes'),
     component: markRaw(Stats),
-    refreshKey: 0
+    refreshKey: 0,
+    category: 'device'
   },
   {
     key: 'event-report',
     name: () => $t('custom.device_details.eventReport'),
     component: markRaw(EventReport),
-    refreshKey: 0
+    refreshKey: 0,
+    category: 'communication'
   },
   {
     key: 'command-delivery',
     name: () => $t('custom.device_details.commandDelivery'),
     component: markRaw(CommandDelivery),
-    refreshKey: 0
+    refreshKey: 0,
+    category: 'communication'
   },
   {
     key: 'expect-message',
     name: () => $t('custom.device_details.expectMessage'),
     component: markRaw(ExpectMessage),
-    refreshKey: 0
+    refreshKey: 0,
+    category: 'communication'
   },
   {
     key: 'automate',
     name: () => $t('custom.device_details.automate'),
     component: markRaw(Automate),
-    refreshKey: 0
+    refreshKey: 0,
+    category: 'communication'
   },
   {
     key: 'give-an-alarm',
     name: () => $t('custom.device_details.giveAnAlarm'),
     component: markRaw(GiveAnAlarm),
-    refreshKey: 0
+    refreshKey: 0,
+    category: 'alarm'
   },
   {
     key: 'device-diagnosis',
     name: () => $t('custom.device_details.deviceDiagnosis'),
     component: markRaw(DeviceDiagnosis),
-    refreshKey: 0
+    refreshKey: 0,
+    category: 'alarm'
   },
   {
     key: 'settings',
     name: () => $t('custom.device_details.settings'),
     component: markRaw(Settings),
-    refreshKey: 0
+    refreshKey: 0,
+    category: 'settings'
   }
 ]
+
+/**
+ * Phase 5 顶层 5 分类定义（中文产品语）
+ *
+ * 顺序遵循「常用在前」：实时（最高频）→ 设备 → 通信 → 告警 → 设置
+ */
+const tabCategories: TabCategoryDef[] = [
+  { key: 'live', label: '实时', icon: '◉' },
+  { key: 'device', label: '设备', icon: '☰' },
+  { key: 'communication', label: '通信', icon: '↔' },
+  { key: 'alarm', label: '告警', icon: '!' },
+  { key: 'settings', label: '设置', icon: '⚙' }
+]
+
+// 当前激活的分类（顶层 tab）。默认 'live'
+const activeCategory = ref<TabCategory>('live')
+
+// 各分类下的子 tab 列表（derived from components）。空分类在模板里隐藏
+const tabsByCategory = computed<Record<TabCategory, TabComponent[]>>(() => {
+  const map: Record<TabCategory, TabComponent[]> = {
+    live: [],
+    device: [],
+    communication: [],
+    alarm: [],
+    settings: []
+  }
+  for (const c of components.value) map[c.category].push(c)
+  return map
+})
 
 const templateChartAvailabilityCache = new Map<string, boolean>()
 
@@ -150,6 +206,14 @@ function ensureActiveTab() {
 
   const exists = components.value.some(item => item.key === tabValue.value)
   if (!exists) tabValue.value = preferredKey
+
+  // Phase 5: 同步 activeCategory 与 lastCategoryTab，确保第一次进入页面
+  // 能落到对应分类（兼容老 URL ?tab=telemetry）
+  const target = components.value.find(c => c.key === tabValue.value)
+  if (target) {
+    activeCategory.value = target.category
+    lastCategoryTab[target.category] = tabValue.value
+  }
 }
 
 function bumpRefreshKey(targetKey: string) {
@@ -231,10 +295,40 @@ const queryParams = reactive({
 const changeTabs = v => {
   startLoading()
 
-  tabValue.value = String(v)
+  const key = String(v)
+  tabValue.value = key
+  // 记录：当前分类下用户选中的子 tab
+  if (components.value.find(c => c.key === key)) {
+    const cat = components.value.find(c => c.key === key)!.category
+    lastCategoryTab[cat] = key
+  }
   setTimeout(() => {
     endLoading()
   }, 500)
+}
+
+/**
+ * Phase 5 顶层分类切换 — 不重置 sub-tab，让用户在「实时 / 设备 / 通信」之间
+ * 自由跳时保留各自最后访问的子 tab。
+ *
+ * 子 tab 状态由组件实例本身持有（component.refreshKey），切换分类不
+ * unmount 既有子组件（因为 n-tabs 用 v-show/v-if 控制可见性，sub-tabs 渲染
+ * 仍跟 activeCategory 联动）。
+ */
+const lastCategoryTab = reactive<Record<TabCategory, string>>({
+  live: '',
+  device: '',
+  communication: '',
+  alarm: '',
+  settings: ''
+})
+
+function onCategoryChange(category: TabCategory) {
+  // 同步 URL ?tab= 保持旧链接兼容
+  const target = lastCategoryTab[category] || (tabsByCategory.value[category][0]?.key ?? '')
+  if (target && tabValue.value !== target) {
+    tabValue.value = target
+  }
 }
 const editConfig = () => {
   showDialog.value = true
@@ -436,6 +530,18 @@ const isEmbeddedHost = computed(() => {
 
 <template>
   <div class="device-details-page" :class="{ 'device-details-page--embedded': isEmbeddedHost }">
+    <UxPageHeader
+      class="device-details-ux-header"
+      :title="name || '--'"
+      :online="device_is_online === 1"
+      :diagnosis="icon_type || undefined"
+      :warn-count="alarmStatus ? 1 : 0"
+      :device-number="deviceData?.device_number || device_number"
+      :address="deviceData?.device_config?.protocol_type"
+      :last-seen="deviceData?.updated_at"
+      :subtitle="$t('custom.devicePage.deviceDetails')"
+      @back="() => history.back()"
+    />
     <section class="device-details-shell">
       <div class="device-details-header">
         <div class="device-details-title-row">
@@ -553,15 +659,37 @@ const isEmbeddedHost = computed(() => {
         </NFlex>
       </div>
       <div class="device-details-content">
+        <!-- Phase 5: 顶层分类 tabs（5 个：实时 / 设备 / 通信 / 告警 / 设置） -->
         <n-tabs
-          :key="tabsRenderKey"
-          v-model:value="tabValue"
-          class="device-details-tabs"
-          animated
+          :key="`cat-${tabsRenderKey}`"
+          v-model:value="activeCategory"
+          class="device-details-tabs device-details-tabs--category"
           type="line"
+          @update:value="onCategoryChange"
+        >
+          <n-tab-pane
+            v-for="cat in tabCategories"
+            v-show="tabsByCategory[cat.key].length > 0"
+            :key="cat.key"
+            :tab="`${cat.icon}  ${cat.label}`"
+            :name="cat.key"
+          />
+        </n-tabs>
+
+        <!-- 子 tabs：当前分类下的具体功能（原 13 个） -->
+        <n-tabs
+          :key="`sub-${tabsRenderKey}`"
+          v-model:value="tabValue"
+          class="device-details-tabs device-details-tabs--sub"
+          type="segment"
           @update:value="changeTabs"
         >
-          <n-tab-pane v-for="component in components" :key="component.key" :tab="component.name()" :name="component.key">
+          <n-tab-pane
+            v-for="component in tabsByCategory[activeCategory]"
+            :key="component.key"
+            :tab="component.name()"
+            :name="component.key"
+          >
             <n-spin class="device-details-tab-body" size="small" :show="loading">
               <component
                 :is="component.component"
@@ -593,8 +721,8 @@ const isEmbeddedHost = computed(() => {
 .device-details-shell {
   overflow: hidden;
   border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
+  border: 1px solid v-bind('palette.border1');
+  background: v-bind('palette.bg1');
 }
 
 .device-details-page--embedded .device-details-shell {
@@ -671,8 +799,20 @@ const isEmbeddedHost = computed(() => {
   padding: 10px 12px 12px;
 }
 
-:deep(.device-details-tabs .n-tabs-nav) {
+:deep(.device-details-tabs--category .n-tabs-nav) {
   padding: 0 20px;
+  background: v-bind('palette.bg2');
+  border-radius: 12px 12px 0 0;
+}
+
+:deep(.device-details-tabs--sub .n-tabs-nav) {
+  padding: 0 20px;
+  background: v-bind('palette.bg1');
+}
+
+:deep(.device-details-tabs--sub .n-tabs-tab) {
+  padding-bottom: 12px;
+  font-weight: 500;
 }
 
 :deep(.device-details-page--embedded .device-details-tabs .n-tabs-nav) {
@@ -680,7 +820,7 @@ const isEmbeddedHost = computed(() => {
 }
 
 :deep(.device-details-tabs .n-tabs-nav::before) {
-  border-bottom-color: #e5e7eb;
+  border-bottom-color: v-bind('palette.border1');
 }
 
 :deep(.device-details-tabs .n-tabs-tab) {

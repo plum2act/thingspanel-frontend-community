@@ -44,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-import { useTheme } from '../components/useTheme'
+import { useTheme } from '@/components/ux/useTheme'
 
 const { theme, palette } = useTheme()
 

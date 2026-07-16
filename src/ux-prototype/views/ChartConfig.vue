@@ -22,7 +22,7 @@
           <span class="ux-chart-card__type">{{ c.type }}</span>
         </div>
         <div class="ux-chart-card__preview" :style="{ background: palette.bg2 }">
-          <PxSparkline :points="c.points" :color="palette.primary" :height="80" />
+          <UxSparkline :points="c.points" :color="palette.primary" :height="80" />
         </div>
         <div class="ux-chart-card__meta" :style="{ color: palette.text3 }">
           {{ c.fields }} 个字段 · 最近修改 {{ c.modified }}
@@ -38,8 +38,8 @@
 </template>
 
 <script setup lang="ts">
-import { useTheme } from '../components/useTheme'
-import PxSparkline from '../components/PxSparkline.vue'
+import { useTheme } from '@/components/ux/useTheme'
+import UxSparkline from '@/components/ux/UxSparkline.vue'
 
 const { palette } = useTheme()
 

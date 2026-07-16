@@ -7,6 +7,7 @@ import ModelDefinition from './step/model-definition.vue'
 import WebChartConfig from './step/web-chart-config.vue'
 import AppChartConfig from './step/app-chart-config.vue'
 import Complete from './step/complete.vue'
+import { useTheme } from '@/components/ux/useTheme'
 
 export interface Props {
   visible: boolean
@@ -84,6 +85,8 @@ const handleStepClick = async (target: number) => {
 }
 
 defineOptions({ name: 'TableActionModal' })
+
+const { palette } = useTheme()
 </script>
 
 <template>
@@ -149,5 +152,13 @@ defineOptions({ name: 'TableActionModal' })
 }
 .clickable-step:hover {
   opacity: 0.85;
+}
+
+/* Phase 6 wizard steps：底色跟随 palette */
+:deep(.n-steps) {
+  background: v-bind('palette.bg2');
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 16px;
 }
 </style>

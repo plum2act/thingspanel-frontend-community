@@ -1,18 +1,9 @@
 <script setup lang="tsx">
 import { computed, getCurrentInstance, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-import type { NumberAnimationInst } from 'naive-ui'
 import dayjs from 'dayjs'
-import { Activity } from '@vicons/tabler'
-import { DocumentOnePage24Regular } from '@vicons/fluent'
 import { useIntervalFn, useWebSocket } from '@vueuse/core'
 import { MovingNumbers } from 'moving-numbers-vue3'
 import moment from 'moment'
-import TempGroup from './groups/TempGroup.vue'
-import AnalogGroup from './groups/AnalogGroup.vue'
-import StatusGroup from './groups/StatusGroup.vue'
-import EnergyGroup from './groups/EnergyGroup.vue'
-import CounterGroup from './groups/CounterGroup.vue'
-import OtherGroup from './groups/OtherGroup.vue'
 import {
   expectMessageAdd,
   getSimulation,
@@ -29,9 +20,15 @@ import { getWebsocketServerUrl, isJSON } from '@/utils/common/tool'
 import { deviceCustomControlList } from '@/service/api/system-data'
 import HistoryData from './modules/history-data.vue'
 import TimeSeriesData from './modules/time-series-data.vue'
-import SparkLine from './modules/SparkLine.vue'
 import { formatRelativeTime } from '@/utils/common/datetime'
 import { useLoading } from '~/packages/hooks'
+import { useTheme } from '@/components/ux/useTheme'
+import UxSection from '@/components/ux/UxSection.vue'
+import UxStatusBadge from '@/components/ux/UxStatusBadge.vue'
+import UxSparkline from '@/components/ux/UxSparkline.vue'
+import UxGaugeRing from '@/components/ux/UxGaugeRing.vue'
+import UxLedBit from '@/components/ux/UxLedBit.vue'
+
 const props = defineProps<{
   id: string
   deviceTemplateId: string
@@ -59,7 +56,6 @@ const tableData = ref([])
 
 const telemetryData = ref<DeviceManagement.telemetryData[]>([])
 const initTelemetryData = ref<any>()
-const numberAnimationInstRef = ref<NumberAnimationInst[] | []>([])
 const { loading, startLoading, endLoading } = useLoading()
 const total = ref(0)
 const showLog = ref(false)
@@ -68,15 +64,12 @@ const operationOptions = [
   { label: $t('custom.device_details.whole'), value: '' },
   { label: $t('custom.device_details.manualOperation'), value: '1' },
   { label: $t('custom.device_details.triggerOperation'), value: '2' }
-  // 其他操作类型选项...
 ]
 const resultOptions = [
   { label: $t('custom.device_details.whole'), value: '' },
   { label: $t('custom.devicePage.success'), value: '1' },
   { label: $t('custom.devicePage.fail'), value: '2' }
-  // 其他发送结果选项...
 ]
-const cardMargin = ref(15) // 卡片的间距
 const log_page = ref(1)
 const showError = ref(false)
 const erroMessage = ref('')
@@ -123,7 +116,7 @@ const { status, send, close } = useWebSocket(wsUrl, {
       }
       telemetryData.value = [...newData, ...newTelemetry]
 
-      // ④ 累积 sparkline 实时数据（纯前端，严格追加，不动上面三步）
+      // 累积 sparkline 实时数据
       const sparkTs = info.systime ? dayjs(info.systime).valueOf() : Date.now()
       for (const key in info) {
         if (key === 'systime') continue
@@ -221,15 +214,13 @@ const fetchTelemetry = async () => {
   const { data, error } = await telemetryDataCurrent(props.id)
   if (!error && data) {
     telemetryData.value = data
-    // 预热 sparkline 首点（仅数值型），首屏不至于完全空白
     const preheatTs = Date.now()
     data.forEach((item: any) => {
       pushSpark(item.key, item.value, item.ts ? dayjs(item.ts).valueOf() : preheatTs)
     })
-    initTelemetryData.value = data[0] || {} // 存储一份模板
+    initTelemetryData.value = data[0] || {}
     initTelemetryData.value.device_id = props.id
     const dataw = {
-      // eslint-disable-next-line no-constant-binary-expression
       device_id: props.id,
       token
     }
@@ -237,12 +228,7 @@ const fetchTelemetry = async () => {
     send(JSON.stringify(dataw))
   }
 }
-const setItemRef = el => {
-  if (el) {
-    const index = el.$attrs['data-index']
-    numberAnimationInstRef.value[index] = el
-  }
-}
+
 const getDeviceDetail = async () => {
   const { data, error } = await deviceDetail(props.id)
   if (!error) {
@@ -295,7 +281,6 @@ const handlePositiveClick = async () => {
   if (isJSON(formValue.value)) {
     let res: any = {}
     if (form.expected) {
-      // 新增期望消息
       const expiry = new Date().getTime() + (form.time ? form.time * 60 * 60 * 1000 : 0)
       res = await expectMessageAdd({
         device_id: props.id,
@@ -304,7 +289,6 @@ const handlePositiveClick = async () => {
         expiry: moment(expiry).format('YYYY-MM-DDTHH:mm:ssZ')
       })
     } else {
-      // 发送属性的逻辑...
       res = await telemetryDataPub({
         device_id: props.id,
         value: formValue.value
@@ -358,7 +342,6 @@ watch(
     getControlList()
   }
 )
-// 设备切换：清空 sparkline 缓冲，防点位串台
 watch(
   () => props.id,
   () => {
@@ -405,148 +388,12 @@ const inputFeedback = computed(() => {
 })
 
 // ================================================================
-// 遥测值/键格式化（设备详情·遥测 Tab 显示优化）
-// ================================================================
-type FormattedValue = {
-  /** 'json' = 解析后的位/键值对；'hex' = 已分组的 645 原始 hex；'string' = 通用文本；'empty' = 无值 */
-  kind: 'json' | 'hex' | 'string' | 'empty'
-  /** 卡片主显示文本（JSON 位标签渲染时仅作 fallback，hex 时为分组大写） */
-  display: string
-  /** 仅 kind='json' 时存在；按原始 key 顺序、boolean→"开/关" */
-  pairs?: Array<{ key: string; value: string }>
-  /** 原始值字符串，用于 hover tooltip 完整显示 */
-  raw: string
-}
-
-const BIT_LABEL_OF: Record<string, string> = {
-  bit0: '位0',
-  bit1: '位1',
-  bit2: '位2',
-  bit3: '位3',
-  bit4: '位4',
-  bit5: '位5',
-  bit6: '位6',
-  bit7: '位7',
-  bit8: '位8',
-  bit9: '位9',
-  bit10: '位10',
-  bit11: '位11',
-  bit12: '位12',
-  bit13: '位13',
-  bit14: '位14',
-  bit15: '位15'
-}
-
-/**
- * 把后端原始值分类、归一化为卡片友好的显示结构。
- *
- * 设计意图：设备上行可能直接喷 DL/T 645 原始数据（长 hex 串 / JSON 位域 / 字符串），
- * 这里把它们转成"对运维人员一眼能读"的形态；纯数字仍由 MovingNumbers 处理，
- * 此函数仅在被 isColor(i) 判定为非数字时调用，不会冲突。
- */
-function formatTelemetryValue(item: any): FormattedValue {
-  let raw0 = item?.value
-  if (raw0 === null || raw0 === undefined || raw0 === '') {
-    return { kind: 'empty', display: '—', raw: '' }
-  }
-
-  // 0) 字符串若长得像 JSON 对象/数组，先尝试 parse。
-  //    ThingsPanel 后端常将 telemetry 值序列化为 JSON 字符串下发（如 DI 状态
-  //    "{\"bit0\":true,\"bit1\":false,...}"），此时 typeof === 'string'，
-  //    原代码会落到 'string' 分支把整段 JSON 直接喷到卡片，看起来"没解析"。
-  //    这里先 parse 再走下面的对象分支即可识别。
-  if (typeof raw0 === 'string') {
-    const trimmed = raw0.trim()
-    if (
-      trimmed.length > 1 &&
-      ((trimmed.startsWith('{') && trimmed.endsWith('}')) ||
-        (trimmed.startsWith('[') && trimmed.endsWith(']')))
-    ) {
-      try {
-        const parsed = JSON.parse(trimmed)
-        if (parsed !== null && typeof parsed === 'object') {
-          raw0 = parsed
-        }
-      } catch {
-        /* 不是合法 JSON，保持原字符串走通用文本分支 */
-      }
-    }
-  }
-
-  // 1) JSON 对象 / 数组（典型如 DI 状态 {"bit0":true,"bit1":false,...}）
-  if (typeof raw0 === 'object') {
-    let pairs: Array<{ key: string; value: string }> = []
-    let display = ''
-    try {
-      const obj = raw0 as Record<string, unknown>
-      const keys = Object.keys(obj)
-      pairs = keys.map(k => {
-        const val = obj[k]
-        if (typeof val === 'boolean') {
-          return { key: BIT_LABEL_OF[k] || k, value: val ? '开' : '关' }
-        }
-        if (typeof val === 'number') {
-          return { key: BIT_LABEL_OF[k] || k, value: val ? '开' : '关' }
-        }
-        return { key: BIT_LABEL_OF[k] || k, value: String(val) }
-      })
-      display = pairs.map(p => `${p.key} ${p.value}`).join(' · ')
-    } catch {
-      display = String(raw0)
-    }
-    let rawStr = ''
-    try {
-      rawStr = JSON.stringify(raw0)
-    } catch {
-      rawStr = String(raw0)
-    }
-    return { kind: 'json', display, pairs, raw: rawStr }
-  }
-
-  // 2) DL/T 645 原始 hex 串（>=8 位连续 hex，整字节对齐）—— 典型如 raw_data 卡
-  const str = String(raw0).trim()
-  if (/^[0-9a-fA-F]{8,}$/.test(str) && str.length % 2 === 0) {
-    const grouped = (str.match(/.{1,2}/g) || []).join(' ').toUpperCase()
-    return { kind: 'hex', display: grouped, raw: str }
-  }
-
-  // 3) 6 位 hex（裸 DI 值段，如 "0123"）—— 也按 hex 分组
-  if (/^[0-9a-fA-F]{6,}$/.test(str)) {
-    const grouped = (str.match(/.{1,2}/g) || []).join(' ').toUpperCase()
-    return { kind: 'hex', display: grouped, raw: str }
-  }
-
-  // 4) 通用字符串：截断防撑破卡片
-  const display = str.length > 36 ? `${str.slice(0, 33)}…` : str
-  return { kind: 'string', display, raw: str }
-}
-
-/**
- * 卡片标题：友好化显示
- * - 有 label：保留 "label (key)" 原貌
- * - 无 label：把原始 DI 码降级为 "未命名点位 (DI: xxxxxxxx)"，避免把 di_00010202 这类
- *   裸码直接当卡片标题
- */
-function formatTelemetryTitle(item: any): string {
-  if (item?.label) return item.label
-  if (item?.key) return '未命名点位'
-  return ''
-}
-
-// ================================================================
 // 仪表盘风格：sparkline 累积缓冲 + 变化% + 状态徽章 + tick
 // ================================================================
 const SPARK_MAX = 30
 
-/** sparkline 滚动窗口缓冲：key → [{ts,value}]。整体引用替换保证响应式。 */
 const sparkBuffer = ref<Record<string, Array<{ ts: number; value: number }>>>({})
 
-/**
- * 推入一个实时点到对应 key 的 sparkline 缓冲。
- * - 仅接受数值型 & 有限值，其余跳过（非数值型不画趋势线）
- * - FIFO 限长 SPARK_MAX
- * - 用整体引用替换（不直接 mutate / 不用 Map.set），规避 Vue 响应式坑
- */
 function pushSpark(key: string, value: unknown, ts: number) {
   if (typeof value !== 'number' || !Number.isFinite(value)) return
   const prev = sparkBuffer.value[key] || []
@@ -555,38 +402,7 @@ function pushSpark(key: string, value: unknown, ts: number) {
   sparkBuffer.value = { ...sparkBuffer.value, [key]: next }
 }
 
-/**
- * 变化百分比：(latest - oldest) / |oldest| × 100，基于累积窗口首尾。
- * 窗口 < 2 点、oldest===0、或不收敛 → null（不渲染徽章）。
- */
-function deltaPercent(i: any): number | null {
-  const buf = sparkBuffer.value[i.key]
-  if (!buf || buf.length < 2) return null
-  const oldest = buf[0].value
-  const latest = buf[buf.length - 1].value
-  if (!Number.isFinite(oldest) || !Number.isFinite(latest)) return null
-  if (oldest === 0) return null
-  const pct = ((latest - oldest) / Math.abs(oldest)) * 100
-  if (!Number.isFinite(pct)) return null
-  return Math.round(pct * 10) / 10
-}
-
-function deltaClass(i: any): string {
-  const p = deltaPercent(i)
-  if (p === null || p === 0) return 'metric-delta--flat'
-  return p > 0 ? 'metric-delta--up' : 'metric-delta--down'
-}
-
-function deltaArrow(i: any): string {
-  const p = deltaPercent(i)
-  if (p === null || p === 0) return ''
-  return p > 0 ? '↑' : '↓'
-}
-
-// ================================================================
-// 状态徽章：online / offline / no-data
-// ================================================================
-const OFFLINE_THRESHOLD_MS = 3 * 60 * 1000 // 3 分钟无新值判离线（常量易调）
+const OFFLINE_THRESHOLD_MS = 3 * 60 * 1000
 const tick = ref(0)
 const { pause: pauseTick } = useIntervalFn(
   () => {
@@ -598,7 +414,7 @@ const { pause: pauseTick } = useIntervalFn(
 type MetricStatus = 'online' | 'offline' | 'no-data'
 
 function getStatus(i: any): MetricStatus {
-  void tick.value // 30s tick 触发重算（ts / Date.now 本身非响应式）
+  void tick.value
   if (!i?.ts) return 'no-data'
   const t = dayjs(i.ts)
   if (!t.isValid()) return 'no-data'
@@ -612,29 +428,240 @@ function statusLabel(i: any): string {
   return $t('common.noData')
 }
 
-function statusTagType(i: any): 'success' | 'default' | 'warning' {
+function statusBadgeType(i: any): 'online' | 'offline' | 'warn' {
   const s = getStatus(i)
-  if (s === 'online') return 'success'
-  if (s === 'offline') return 'default'
-  return 'warning'
+  if (s === 'online') return 'online'
+  if (s === 'offline') return 'offline'
+  return 'warn'
 }
 
 function metricCardClass(i: any): string {
   const s = getStatus(i)
-  if (s === 'offline') return 'metric-card--offline'
-  if (s === 'no-data') return 'metric-card--nodata'
+  if (s === 'offline') return 'ux-other-card--offline'
+  if (s === 'no-data') return 'ux-other-card--nodata'
   return ''
 }
 
 // ================================================================
-// 遥测指标按语义分组（业界电力监控 / SCADA 通用分类）
+// 主题 + 三相颜色（UxPalette 引用）
+// ================================================================
+const { palette } = useTheme()
+const phaseColors = computed(() => [palette.value.phaseA, palette.value.phaseB, palette.value.phaseC])
+function phaseColor(idx: number) {
+  return phaseColors.value[idx] || palette.value.primary
+}
+
+// ================================================================
+// 温度分级
+// ================================================================
+function tempLevel(v: any): 'cold' | 'normal' | 'warm' | 'hot' {
+  const t = Number(v)
+  if (Number.isNaN(t)) return 'normal'
+  if (t < 32) return 'cold'
+  if (t < 40) return 'normal'
+  if (t < 50) return 'warm'
+  return 'hot'
+}
+
+function tempBadgeText(it: any): string {
+  switch (tempLevel(it.value)) {
+    case 'cold':
+      return '低温'
+    case 'warm':
+      return '偏高'
+    case 'hot':
+      return '高温'
+    default:
+      return '正常'
+  }
+}
+
+function tempBadgeType(it: any): 'info' | 'success' | 'warning' | 'error' {
+  switch (tempLevel(it.value)) {
+    case 'cold':
+      return 'info'
+    case 'warm':
+      return 'warning'
+    case 'hot':
+      return 'error'
+    default:
+      return 'success'
+  }
+}
+
+// ================================================================
+// 模拟量范围 + 颜色
+// ================================================================
+const RANGE_MAP: Record<string, [number, number]> = {
+  mccb_zero_seq_current: [0, 5],
+  mccb_residual_current: [0, 2],
+  mccb_zero_seq_voltage: [0, 50],
+  mccb_voltage_unbalance: [0, 1],
+  mccb_current_unbalance: [0, 1]
+}
+const DEFAULT_RANGE: [number, number] = [0, 100]
+
+function rangeFor(it: any): [number, number] {
+  return RANGE_MAP[it.key] || DEFAULT_RANGE
+}
+
+function rangePercent(it: any): number {
+  const v = Number(it.value)
+  if (Number.isNaN(v)) return 0
+  const [min, max] = rangeFor(it)
+  const pct = (v - min) / (max - min)
+  return Math.max(0, Math.min(1, pct))
+}
+
+function rangeColor(it: any): string {
+  const pct = rangePercent(it)
+  if (pct >= 0.95) return palette.value.danger
+  if (pct >= 0.8) return palette.value.warning
+  if (pct >= 0.5) return palette.value.info
+  return palette.value.success
+}
+
+// ================================================================
+// 状态字位解析
+// ================================================================
+const BIT_LABELS: Record<string, string[]> = {
+  mccb_di1_status: ['DI1', 'DI2', 'DI3', 'DI4'],
+  mccb_di2_status: ['DI1', 'DI2', 'DI3', 'DI4'],
+  mccb_di3_status: ['DI1', 'DI2', 'DI3', 'DI4'],
+  mccb_di4_status: ['DI1', 'DI2', 'DI3', 'DI4']
+}
+const DEFAULT_BIT_LABELS = ['bit0', 'bit1', 'bit2', 'bit3', 'bit4', 'bit5', 'bit6', 'bit7']
+
+function parseValue(v: any): number {
+  if (typeof v === 'number') return v & 0xff
+  if (typeof v === 'string') {
+    try {
+      const j = JSON.parse(v)
+      if (typeof j === 'object' && j !== null) {
+        let n = 0
+        for (let i = 0; i < 8; i++) {
+          if (j[`bit${i}`]) n |= 1 << i
+        }
+        return n
+      }
+    } catch {
+      // not JSON
+    }
+    const m = v.match(/0x([0-9a-fA-F]+)/)
+    if (m) return parseInt(m[1], 16) & 0xff
+    const n = parseInt(v, 16)
+    if (!Number.isNaN(n)) return n & 0xff
+  }
+  return 0
+}
+
+function bitInfo(it: any): { bits: Array<{ idx: number; label: string; on: boolean }> } {
+  const n = parseValue(it.value)
+  const labels = BIT_LABELS[it.key] || DEFAULT_BIT_LABELS
+  let highBit = 3
+  for (let i = 7; i >= 0; i--) {
+    if (n & (1 << i)) {
+      highBit = i
+      break
+    }
+  }
+  const bitCount = Math.min(8, Math.max(4, highBit + 1))
+  const bits: Array<{ idx: number; label: string; on: boolean }> = []
+  for (let i = 0; i < bitCount; i++) {
+    bits.push({ idx: i, label: labels[i] || `bit${i}`, on: Boolean(n & (1 << i)) })
+  }
+  return { bits }
+}
+
+function formatHex(v: any): string {
+  const n = parseValue(v)
+  return n.toString(16).toUpperCase().padStart(2, '0')
+}
+
+// ================================================================
+// 电能单调性
+// ================================================================
+function isMonotonic(it: any): boolean {
+  const buf = sparkBuffer.value[it.key] || []
+  if (buf.length < 2) return true
+  const recent = buf.slice(-6)
+  for (let i = 1; i < recent.length; i++) {
+    if (recent[i].value < recent[i - 1].value - 0.001) return false
+  }
+  return true
+}
+
+function deltaPerTick(it: any): string {
+  const buf = sparkBuffer.value[it.key] || []
+  if (buf.length < 2) return '--'
+  const last = buf[buf.length - 1].value
+  const prev = buf[buf.length - 2].value
+  const d = last - prev
+  if (Math.abs(d) < 0.001) return '0'
+  return `${d >= 0 ? '+' : ''}${d.toFixed(2)}`
+}
+
+// ================================================================
+// 计数器 delta
+// ================================================================
+function counterDeltaText(it: any): string {
+  const buf = sparkBuffer.value[it.key] || []
+  if (buf.length < 2) return '·'
+  const last = buf[buf.length - 1].value
+  const prev = buf[buf.length - 2].value
+  const d = last - prev
+  if (d === 0) return '±0'
+  if (d > 0) return `+${d}`
+  return `${d}`
+}
+
+function counterDeltaClass(it: any): string {
+  const buf = sparkBuffer.value[it.key] || []
+  if (buf.length < 2) return ''
+  const last = buf[buf.length - 1].value
+  const prev = buf[buf.length - 2].value
+  if (last > prev) return 'ux-counter-card__delta-value--up'
+  if (last < prev) return 'ux-counter-card__delta-value--down'
+  return 'ux-counter-card__delta-value--flat'
+}
+
+// ================================================================
+// 数值格式化
+// ================================================================
+function formatTemp(v: any): string {
+  const n = Number(v)
+  if (Number.isNaN(n)) return '--'
+  return n.toFixed(1)
+}
+
+function formatEnergy(v: any): string {
+  const n = Number(v)
+  if (Number.isNaN(n)) return '--'
+  return n.toLocaleString('en-US', { maximumFractionDigits: 2 })
+}
+
+function formatCounter(v: any): string {
+  const n = Number(v)
+  if (Number.isNaN(n)) return '--'
+  return n.toLocaleString('zh-CN')
+}
+
+function formatAnalog(v: any): string {
+  const n = Number(v)
+  if (Number.isNaN(n)) return '--'
+  if (Math.abs(n) >= 100) return n.toFixed(1)
+  if (Math.abs(n) >= 10) return n.toFixed(2)
+  return n.toFixed(3)
+}
+
+// ================================================================
+// 遥测指标按语义分组
 // ================================================================
 type TelemetryGroup = 'temp' | 'analog' | 'status' | 'energy' | 'counter' | 'other'
 
 function categorizeTelemetry(i: any): TelemetryGroup {
   const key: string = (i?.key || '').toLowerCase()
   if (!key) return 'other'
-  // 状态/位/字（开关量、模式字、运行字、保护字）
   if (
     key.includes('_di') ||
     key.includes('protect_status') ||
@@ -643,13 +670,9 @@ function categorizeTelemetry(i: any): TelemetryGroup {
   ) {
     return 'status'
   }
-  // 电能（累积量）
   if (key.includes('energy')) return 'energy'
-  // 计数
   if (key.endsWith('count')) return 'counter'
-  // 温度
   if (key.includes('temp')) return 'temp'
-  // 电气模拟量（电流/电压/不平衡度）
   if (
     key.includes('current') ||
     key.includes('voltage') ||
@@ -678,7 +701,6 @@ const groupedTelemetry = computed(() => {
 
 <template>
   <n-card class="w-full">
-    <!-- 第一行 -->
     <NFlex justify="space-between">
       <n-button type="primary" class="mb-4" @click="openDialog">{{ $t('generate.issue-control') }}</n-button>
 
@@ -687,7 +709,6 @@ const groupedTelemetry = computed(() => {
       </n-button>
     </NFlex>
 
-    <!-- 自定义控制 -->
     <NGrid x-gap="20" y-gap="20" cols="1 s:2 m:3 l:4" responsive="screen" class="mb-4">
       <NGridItem v-for="item in controlList" :key="item.id">
         <NCard hoverable>
@@ -698,33 +719,219 @@ const groupedTelemetry = computed(() => {
       </NGridItem>
     </NGrid>
 
-    <!-- 第二行：遥测指标卡（按语义分组，业界电力监控 / SCADA 通用分类） -->
-    <TempGroup v-if="groupedTelemetry.temp.length" :items="groupedTelemetry.temp" :spark-buffer="sparkBuffer" />
-    <AnalogGroup
+    <!-- 三相温度 -->
+    <UxSection
+      v-if="groupedTelemetry.temp.length"
+      title="三相温度"
+      icon="🌡"
+      :count="groupedTelemetry.temp.length"
+      :icon-color="palette.danger"
+    >
+      <div class="ux-phase-grid">
+        <div
+          v-for="(it, idx) in groupedTelemetry.temp"
+          :key="it.key"
+          class="ux-phase-card"
+          :style="{ background: palette.bg1, borderColor: phaseColor(idx) + '40' }"
+        >
+          <div class="ux-phase-card__head">
+            <span class="ux-phase-card__phase" :style="{ background: phaseColor(idx) }">
+              {{ ['A', 'B', 'C'][idx] || `相${idx + 1}` }}
+            </span>
+            <span class="ux-phase-card__label">{{ it.label || it.key }}</span>
+            <span
+              class="ux-phase-card__level"
+              :style="{ color: phaseColor(idx), background: phaseColor(idx) + '15' }"
+            >
+              {{ tempBadgeText(it) }}
+            </span>
+          </div>
+          <div class="ux-phase-card__value-row">
+            <span class="ux-phase-card__num" :style="{ color: phaseColor(idx) }">{{ formatTemp(it.value) }}</span>
+            <span class="ux-phase-card__unit">{{ it.unit || '℃' }}</span>
+          </div>
+          <div class="ux-phase-card__spark">
+            <UxSparkline :points="sparkBuffer[it.key] || []" :color="phaseColor(idx)" :fill="phaseColor(idx) + '20'" :height="32" />
+          </div>
+          <div class="ux-phase-card__foot">
+            <n-tag :type="tempBadgeType(it)" size="small" round :bordered="false">{{ tempBadgeText(it) }}</n-tag>
+            <span class="ux-phase-card__ts">{{ formatRelativeTime(it.ts) }}</span>
+          </div>
+        </div>
+      </div>
+    </UxSection>
+
+    <!-- 电气模拟量 -->
+    <UxSection
       v-if="groupedTelemetry.analog.length"
-      :items="groupedTelemetry.analog"
-      :spark-buffer="sparkBuffer"
-    />
-    <StatusGroup v-if="groupedTelemetry.status.length" :items="groupedTelemetry.status" />
-    <EnergyGroup
+      title="电流 / 电压 / 不平衡"
+      icon="∿"
+      :count="groupedTelemetry.analog.length"
+      :icon-color="palette.info"
+    >
+      <div class="ux-analog-grid">
+        <div
+          v-for="it in groupedTelemetry.analog"
+          :key="it.key"
+          class="ux-analog-card"
+          :style="{ background: palette.bg1, borderColor: palette.border1 }"
+        >
+          <UxGaugeRing :percent="rangePercent(it)" :color="rangeColor(it)" :size="92" :stroke-width="9" />
+          <div class="ux-analog-card__meta">
+            <div class="ux-analog-card__label">{{ it.label || it.key }}</div>
+            <div class="ux-analog-card__value-row">
+              <span class="ux-analog-card__num">{{ formatAnalog(it.value) }}</span>
+              <span class="ux-analog-card__unit">{{ it.unit || '' }}</span>
+            </div>
+            <div class="ux-analog-card__range" :style="{ color: palette.text3 }">
+              范围 {{ rangeFor(it)[0] }} ~ {{ rangeFor(it)[1] }}{{ it.unit || '' }}
+            </div>
+            <div class="ux-analog-card__spark">
+              <UxSparkline :points="sparkBuffer[it.key] || []" :color="rangeColor(it)" :fill="rangeColor(it) + '20'" :height="32" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </UxSection>
+
+    <!-- 开关 / 状态字 -->
+    <UxSection
+      v-if="groupedTelemetry.status.length"
+      title="开关 / 状态字"
+      icon="◉"
+      :count="groupedTelemetry.status.length"
+      :icon-color="palette.success"
+    >
+      <div class="ux-status-grid">
+        <div
+          v-for="it in groupedTelemetry.status"
+          :key="it.key"
+          class="ux-status-card"
+          :style="{ background: palette.bg1, borderColor: palette.border1 }"
+        >
+          <div class="ux-status-card__head">
+            <span class="ux-status-card__title">{{ it.label || it.key }}</span>
+            <code class="ux-status-card__hex">0x{{ formatHex(it.value) }}</code>
+          </div>
+          <div class="ux-status-card__bits">
+            <UxLedBit
+              v-for="b in bitInfo(it).bits"
+              :key="b.idx"
+              :label="b.label"
+              :on="b.on"
+            />
+          </div>
+          <div class="ux-status-card__foot" :style="{ color: palette.text3 }">
+            <span>{{ formatRelativeTime(it.ts) }}</span>
+            <UxStatusBadge :type="statusBadgeType(it)" :text="statusLabel(it)" />
+          </div>
+        </div>
+      </div>
+    </UxSection>
+
+    <!-- 电能 -->
+    <UxSection
       v-if="groupedTelemetry.energy.length"
-      :items="groupedTelemetry.energy"
-      :spark-buffer="sparkBuffer"
-    />
-    <CounterGroup
+      title="电能"
+      icon="⚡"
+      :count="groupedTelemetry.energy.length"
+      :icon-color="palette.warning"
+    >
+      <div class="ux-energy-grid">
+        <div
+          v-for="it in groupedTelemetry.energy"
+          :key="it.key"
+          class="ux-energy-card"
+          :style="{ background: palette.bg2, borderColor: palette.warning + '60' }"
+        >
+          <div class="ux-energy-card__head">
+            <span class="ux-energy-card__title">{{ it.label || it.key }}</span>
+            <span class="ux-energy-card__trend" :style="{ background: palette.warning + '20', color: palette.warning }">
+              {{ isMonotonic(it) ? '↑ 累计递增' : '— 持平' }}
+            </span>
+          </div>
+          <div class="ux-energy-card__num">{{ formatEnergy(it.value) }}</div>
+          <div class="ux-energy-card__unit">{{ it.unit || 'kWh' }}</div>
+          <div class="ux-energy-card__delta-row">
+            <span :style="{ color: palette.text3 }">本周期 {{ deltaPerTick(it) }}</span>
+            <UxSparkline :points="sparkBuffer[it.key] || []" :color="palette.warning" :fill="palette.warning + '20'" :height="36" />
+          </div>
+        </div>
+      </div>
+    </UxSection>
+
+    <!-- 计数 -->
+    <UxSection
       v-if="groupedTelemetry.counter.length"
-      :items="groupedTelemetry.counter"
-      :spark-buffer="sparkBuffer"
-    />
-    <OtherGroup
+      title="计数"
+      icon="#"
+      :count="groupedTelemetry.counter.length"
+      :icon-color="palette.danger"
+    >
+      <div class="ux-counter-grid">
+        <div
+          v-for="it in groupedTelemetry.counter"
+          :key="it.key"
+          class="ux-counter-card"
+          :style="{ background: palette.bg1, borderColor: palette.border1 }"
+        >
+          <div class="ux-counter-card__label">{{ it.label || it.key }}</div>
+          <div class="ux-counter-card__value-row">
+            <span class="ux-counter-card__num">{{ formatCounter(it.value) }}</span>
+            <span v-if="it.unit" class="ux-counter-card__unit">{{ it.unit }}</span>
+          </div>
+          <div class="ux-counter-card__delta">
+            <span :style="{ color: palette.text3 }">本周期增量</span>
+            <span class="ux-counter-card__delta-value" :class="counterDeltaClass(it)">
+              {{ counterDeltaText(it) }}
+            </span>
+          </div>
+          <div class="ux-counter-card__foot" :style="{ color: palette.text3 }">
+            <span>{{ formatRelativeTime(it.ts) }}</span>
+            <UxStatusBadge :type="statusBadgeType(it)" :text="statusLabel(it)" />
+          </div>
+        </div>
+      </div>
+    </UxSection>
+
+    <!-- 其他：保留 MovingNumbers 兜底 -->
+    <UxSection
       v-if="groupedTelemetry.other.length"
-      :items="groupedTelemetry.other"
-      :spark-buffer="sparkBuffer"
-      :status-tag-type="statusTagType"
-      :status-label="statusLabel"
-      :metric-card-class="metricCardClass"
-      :is-color="isColor"
-    />
+      title="其他"
+      icon="·"
+      :count="groupedTelemetry.other.length"
+      :icon-color="palette.text3"
+    >
+      <div class="ux-other-grid">
+        <div
+          v-for="it in groupedTelemetry.other"
+          :key="it.key"
+          class="ux-other-card"
+          :class="metricCardClass(it)"
+          :style="{ background: palette.bg1, borderColor: palette.border1 }"
+        >
+          <div class="ux-other-card__head">
+            <span class="ux-other-card__label">{{ it.label || it.key }}</span>
+            <UxStatusBadge :type="statusBadgeType(it)" :text="statusLabel(it)" />
+          </div>
+          <div class="ux-other-card__value-row">
+            <template v-if="isColor(it) === '#cccccc'">
+              <MovingNumbers :data-index="it.key" :m-num="it.value || 0" :quantile-show="true" />
+              <span v-if="it.unit" class="ux-other-card__unit">{{ it.unit }}</span>
+            </template>
+            <template v-else>
+              <span class="ux-other-card__text">{{ it.value }}</span>
+            </template>
+          </div>
+          <div v-if="isColor(it) === '#cccccc' && sparkBuffer[it.key]?.length" class="ux-other-card__spark">
+            <UxSparkline :points="sparkBuffer[it.key] || []" :color="palette.primary" :height="28" />
+          </div>
+          <div class="ux-other-card__foot" :style="{ color: palette.text3 }">
+            <span>{{ formatRelativeTime(it.ts) }}</span>
+          </div>
+        </div>
+      </div>
+    </UxSection>
 
     <!-- 第三行 -->
     <n-space>
@@ -736,8 +943,6 @@ const groupedTelemetry = computed(() => {
       />
       <n-select v-model:value="sendResult" :options="resultOptions" style="width: 200px" @update:value="fetchData" />
     </n-space>
-
-    <!-- 第四行 -->
 
     <n-data-table :loading="loading" class="mt-4" :columns="columns" :data="tableData" :pagination="false" />
     <div class="mt-4 w-full flex justify-end">
@@ -867,33 +1072,7 @@ const groupedTelemetry = computed(() => {
   </n-card>
 </template>
 
-<style lang="scss" oped>
-.line1 {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-
-  span {
-    &:nth-child(2) {
-      color: #ccc;
-      padding-left: 5px;
-    }
-  }
-}
-
-.card-body {
-  padding: 10px 0 10px;
-  display: flex;
-  align-items: end;
-  gap: 4px;
-
-  span {
-    &:first-child {
-      font-size: 32px;
-      line-height: 1;
-    }
-  }
-}
+<style lang="scss" scoped>
 .ml-20px {
   margin-left: 20px;
 }
@@ -906,276 +1085,357 @@ const groupedTelemetry = computed(() => {
 .fs-0 {
   flex-shrink: 0;
 }
-.chart-table-dialog {
-  width: 80%;
-  max-width: 1000px;
-}
-
-.value-display-ellipsis {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  word-break: break-all; /* Or 'break-word' if preferred */
-}
 
 /* ============================================================
- * 遥测卡片值/标题显示优化（设备详情·遥测 Tab）
- *  - .value-bits / .value-bit*  : 位字段（如 DI 状态）渲染为位标签
- *  - .value-hex                 : DL/T 645 原始 hex（raw_data）分组 + mono 字体
- *  - .value-empty / .value-text : 空值占位 / 通用字符串
- *  - .value-unit                : 单位后缀（kWh, °C）
- *  - .line1-unknown / .line1-key: 未命名点位标题降级
+ * 三相温度卡片（Ux 风格）
  * ============================================================ */
-.value-bits {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 8px;
-  max-height: 88px;
-  overflow-y: auto;
-  align-items: center;
-  font-size: 13px;
-  line-height: 1.3;
+.ux-phase-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
 }
-.value-bit {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  border: 1px solid #e5e6eb;
-  border-radius: 4px;
-  background: #fafafa;
-  white-space: nowrap;
+@media (max-width: 880px) {
+  .ux-phase-grid {
+    grid-template-columns: 1fr;
+  }
 }
-.value-bit-k {
-  font-style: normal;
-  color: #888;
-  font-size: 12px;
-}
-.value-bit-v {
-  font-weight: 600;
-  font-size: 13px;
-  padding: 0 4px;
-  border-radius: 3px;
-}
-.value-bit-v.is-on {
-  color: #18a058;
-  background: #ebf8f1;
-}
-.value-bit-v.is-off {
-  color: #999;
-  background: #f0f0f0;
-}
-.value-bit-v.is-text {
-  color: #555;
-  background: transparent;
-}
-
-.value-hex {
-  display: block;
-  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
-  font-size: 12px;
-  line-height: 1.5;
-  word-break: break-all;
-  color: #444;
-  background: #f8f8f8;
-  border: 1px solid #eaeaea;
-  padding: 4px 8px;
-  border-radius: 4px;
-  max-height: 88px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-.value-tooltip-body {
-  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
-  font-size: 12px;
-  margin: 0;
-  max-width: 360px;
-  white-space: pre-wrap;
-  word-break: break-all;
-}
-
-.value-empty {
-  font-size: 28px;
-  color: #c8c8cc;
-  font-weight: 300;
-  line-height: 1;
-}
-.value-text {
-  font-size: 18px;
-  word-break: break-all;
-  color: #333;
-}
-.value-unit {
-  color: #999;
-  font-size: 13px;
-  margin-left: 4px;
-  font-weight: 500;
-}
-
-.line1-unknown {
-  color: #909399;
-  font-weight: 500;
-}
-.line1-key {
-  color: #c0c4cc;
-  padding-left: 5px;
-}
-
-/* ============================================================
- * 仪表盘风格指标卡（设备详情·遥测 Tab）
- *  - .metric-card        : 卡片容器（替代原「卡中卡」n-card）
- *  - .metric-head/title  : 标题 + 状态徽章
- *  - .metric-value-row   : 数值行（数值型含变化%，非数值型走 value-* 类）
- *  - .metric-spark       : sparkline 区域（仅数值型）
- *  - .metric-foot        : 相对时间 + 操作图标
- * ============================================================ */
-.metric-card {
+.ux-phase-card {
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 8px;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  height: 100%;
-  min-height: 168px;
-  padding: 14px 16px;
-  border: 1px solid #eceef2;
-  border-radius: 10px;
-  background: #fff;
-  box-sizing: border-box;
-  transition: border-color 0.2s, box-shadow 0.2s, opacity 0.2s;
-
-  &:hover {
-    border-color: rgb(var(--primary-color));
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
-  }
 }
-.metric-card--offline {
-  opacity: 0.72;
-}
-.metric-card--nodata {
-  opacity: 0.55;
-}
-
-.metric-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-}
-.metric-title {
-  min-width: 0;
-  flex: 1 1 auto;
+.ux-phase-card__head {
   display: flex;
   align-items: center;
-  gap: 4px;
-  overflow: hidden;
+  gap: 8px;
 }
-.metric-label {
-  font-size: 14px;
+.ux-phase-card__phase {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+}
+.ux-phase-card__label {
+  font-size: 12px;
   font-weight: 600;
-  color: #1d2129;
-  white-space: nowrap;
+  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.metric-label--unknown {
-  color: #909399;
-  font-weight: 500;
-}
-.metric-key {
-  font-size: 12px;
-  color: #c0c4cc;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
-.metric-badge {
-  flex-shrink: 0;
-  font-size: 12px;
+.ux-phase-card__level {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
 }
-
-.metric-value-row {
+.ux-phase-card__value-row {
   display: flex;
   align-items: baseline;
+  gap: 4px;
+}
+.ux-phase-card__num {
+  font-size: 32px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.ux-phase-card__unit {
+  font-size: 14px;
+  opacity: 0.6;
+}
+.ux-phase-card__spark {
+  height: 32px;
+}
+.ux-phase-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #999;
+}
+
+/* ============================================================
+ * 电气模拟量卡片
+ * ============================================================ */
+.ux-analog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.ux-analog-card {
+  border: 1px solid;
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.ux-analog-card__meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.ux-analog-card__label {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.85;
+}
+.ux-analog-card__value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.ux-analog-card__num {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.ux-analog-card__unit {
+  font-size: 12px;
+  opacity: 0.6;
+}
+.ux-analog-card__range {
+  font-size: 11px;
+}
+.ux-analog-card__spark {
+  height: 32px;
+}
+
+/* ============================================================
+ * 开关 / 状态字
+ * ============================================================ */
+.ux-status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.ux-status-card {
+  border: 1px solid;
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ux-status-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ux-status-card__title {
+  font-weight: 600;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ux-status-card__hex {
+  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+  font-size: 11px;
+  opacity: 0.6;
+}
+.ux-status-card__bits {
+  display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  min-height: 40px;
 }
-.metric-num {
-  font-size: 30px;
-  line-height: 1.1;
-  font-weight: 600;
-  color: #1d2129;
+.ux-status-card__foot {
   display: flex;
-  align-items: baseline;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
 }
-.metric-delta {
-  font-size: 12px;
+
+/* ============================================================
+ * 电能
+ * ============================================================ */
+.ux-energy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 12px;
+}
+.ux-energy-card {
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 8px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ux-energy-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ux-energy-card__title {
+  font-size: 13px;
   font-weight: 600;
-  padding: 1px 6px;
-  border-radius: 4px;
-  white-space: nowrap;
 }
-.metric-delta--up {
-  color: #e0504a;
-  background: #fdecea;
+.ux-energy-card__trend {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
 }
-.metric-delta--down {
-  color: #18a058;
-  background: #ebf8f1;
+.ux-energy-card__num {
+  font-size: 32px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+  background: linear-gradient(90deg, v-bind('palette.warning') 0%, v-bind('palette.danger') 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
-.metric-delta--flat {
-  color: #909399;
-  background: #f4f4f5;
+.ux-energy-card__unit {
+  font-size: 14px;
+  opacity: 0.6;
 }
-
-.metric-spark {
-  margin-top: 2px;
-  min-height: 32px;
-}
-
-.metric-foot {
+.ux-energy-card__delta-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-top: auto;
-  padding-top: 6px;
-  border-top: 1px dashed #f0f1f3;
-}
-.metric-time {
   font-size: 12px;
-  color: #909399;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
-.metric-actions {
+.ux-energy-card__delta-row > .ux-sparkline {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ============================================================
+ * 计数
+ * ============================================================ */
+.ux-counter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+.ux-counter-card {
+  border: 1px solid;
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ux-counter-card__label {
+  font-size: 12px;
+  opacity: 0.75;
+}
+.ux-counter-card__value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.ux-counter-card__num {
+  font-size: 28px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.ux-counter-card__unit {
+  font-size: 12px;
+  opacity: 0.6;
+}
+.ux-counter-card__delta {
   display: flex;
   align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.ux-counter-card__delta-value {
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: #f5f5f5;
+  color: #999;
+}
+.ux-counter-card__delta-value--up {
+  color: #cf1322;
+  background: #fff1f0;
+}
+.ux-counter-card__delta-value--down {
+  color: #389e0d;
+  background: #f6ffed;
+}
+.ux-counter-card__delta-value--flat {
+  color: #999;
+  background: #f5f5f5;
+}
+.ux-counter-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+}
+
+/* ============================================================
+ * 其他（兜底）
+ * ============================================================ */
+.ux-other-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 12px;
-  flex-shrink: 0;
 }
-.metric-action-icon {
-  cursor: pointer;
-  color: #86909c;
-  transition: color 0.2s;
-
-  &:hover {
-    color: rgb(var(--primary-color));
-  }
+.ux-other-card {
+  padding: 12px 14px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
-.metric-action-dots {
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-  color: #86909c;
-  transition: color 0.2s;
-
-  &:hover {
-    color: rgb(var(--primary-color));
-  }
+.ux-other-card--offline {
+  opacity: 0.72;
+}
+.ux-other-card--nodata {
+  opacity: 0.55;
+}
+.ux-other-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ux-other-card__label {
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.ux-other-card__value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.ux-other-card__text {
+  font-size: 18px;
+  color: #333;
+  word-break: break-all;
+}
+.ux-other-card__unit {
+  font-size: 12px;
+  color: #888;
+}
+.ux-other-card__spark {
+  height: 28px;
+}
+.ux-other-card__foot {
+  font-size: 11px;
 }
 </style>

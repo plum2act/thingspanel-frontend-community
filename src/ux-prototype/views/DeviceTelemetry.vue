@@ -1,6 +1,6 @@
 <template>
   <div class="ux-page" :style="{ background: palette.bg0, color: palette.text1 }">
-    <PxPageHeader
+    <UxPageHeader
       :title="mockDevice.name"
       :online="mockDevice.online"
       :warn-count="mockDevice.warnCount"
@@ -21,12 +21,12 @@
           图表配置
         </button>
       </template>
-    </PxPageHeader>
+    </UxPageHeader>
 
     <!-- 实时总览 3 大 KPI -->
-    <PxSection title="实时总览" icon="∑" :count="kpiPoints.length" :icon-color="palette.primary">
+    <UxSection title="实时总览" icon="∑" :count="kpiPoints.length" :icon-color="palette.primary">
       <div class="ux-kpi-grid">
-        <PxStatCard
+        <UxStatCard
           v-for="p in kpiPoints"
           :key="p.key"
           :label="p.label"
@@ -38,10 +38,10 @@
           :badge-type="p.kind === 'energy' ? 'success' : 'info'"
         />
       </div>
-    </PxSection>
+    </UxSection>
 
     <!-- 三相温度 -->
-    <PxSection title="三相温度" icon="🌡" :count="tempPoints.length" :icon-color="palette.danger">
+    <UxSection title="三相温度" icon="🌡" :count="tempPoints.length" :icon-color="palette.danger">
       <div class="ux-phase-grid">
         <div
           v-for="(p, idx) in tempPoints"
@@ -68,14 +68,14 @@
             <span class="ux-phase-card__unit">{{ p.unit }}</span>
           </div>
           <div class="ux-phase-card__spark">
-            <PxSparkline :points="p.history" :color="phaseColor(idx)" :fill="phaseColor(idx) + '20'" :height="36" />
+            <UxSparkline :points="p.history" :color="phaseColor(idx)" :fill="phaseColor(idx) + '20'" :height="36" />
           </div>
         </div>
       </div>
-    </PxSection>
+    </UxSection>
 
     <!-- 开关量 + 状态字 -->
-    <PxSection title="开关量 / 状态字" icon="◉" :count="statusPoints.length" :icon-color="palette.success">
+    <UxSection title="开关量 / 状态字" icon="◉" :count="statusPoints.length" :icon-color="palette.success">
       <div class="ux-status-grid">
         <div
           v-for="p in statusPoints"
@@ -88,7 +88,7 @@
             <code class="ux-status-card__hex">0x{{ formatHex(p.value) }}</code>
           </div>
           <div class="ux-status-card__bits">
-            <PxLedBit
+            <UxLedBit
               v-for="(bit, i) in bitsOf(p.value, p.bitLabels)"
               :key="i"
               :label="bit.label"
@@ -97,10 +97,10 @@
           </div>
         </div>
       </div>
-    </PxSection>
+    </UxSection>
 
     <!-- 电能 -->
-    <PxSection title="电能" icon="⚡" :count="energyPoints.length" :icon-color="palette.warning">
+    <UxSection title="电能" icon="⚡" :count="energyPoints.length" :icon-color="palette.warning">
       <div class="ux-energy-grid">
         <div
           v-for="p in energyPoints"
@@ -116,13 +116,13 @@
           </div>
           <div class="ux-energy-card__num">{{ Number(p.value).toLocaleString('en-US', { maximumFractionDigits: 2 }) }}</div>
           <div class="ux-energy-card__unit">{{ p.unit }}</div>
-          <PxSparkline :points="p.history" :color="palette.warning" :fill="palette.warning + '20'" :height="44" />
+          <UxSparkline :points="p.history" :color="palette.warning" :fill="palette.warning + '20'" :height="44" />
         </div>
       </div>
-    </PxSection>
+    </UxSection>
 
     <!-- 模拟量（电流/电压/不平衡） -->
-    <PxSection title="电流 / 电压 / 不平衡" icon="∿" :count="analogPoints.length" :icon-color="palette.info">
+    <UxSection title="电流 / 电压 / 不平衡" icon="∿" :count="analogPoints.length" :icon-color="palette.info">
       <div class="ux-analog-grid">
         <div
           v-for="p in analogPoints"
@@ -130,7 +130,7 @@
           class="ux-analog-card"
           :style="{ background: palette.bg2, borderColor: palette.border1 }"
         >
-          <PxGaugeRing
+          <UxGaugeRing
             :percent="rangePercent(p)"
             :color="rangeColor(p)"
             :size="92"
@@ -146,15 +146,15 @@
               范围 {{ p.range![0] }} ~ {{ p.range![1] }}{{ p.unit }}
             </div>
             <div class="ux-analog-card__spark">
-              <PxSparkline :points="p.history" :color="rangeColor(p)" :fill="rangeColor(p) + '20'" :height="32" />
+              <UxSparkline :points="p.history" :color="rangeColor(p)" :fill="rangeColor(p) + '20'" :height="32" />
             </div>
           </div>
         </div>
       </div>
-    </PxSection>
+    </UxSection>
 
     <!-- 计数器 -->
-    <PxSection title="计数" icon="#" :count="counterPoints.length" :icon-color="palette.danger">
+    <UxSection title="计数" icon="#" :count="counterPoints.length" :icon-color="palette.danger">
       <div class="ux-counter-grid">
         <div
           v-for="p in counterPoints"
@@ -175,26 +175,26 @@
           </div>
         </div>
       </div>
-    </PxSection>
+    </UxSection>
 
     <!-- 最近告警 -->
-    <PxSection title="最近告警" icon="!" :count="recentAlarms.length" :icon-color="palette.danger">
-      <PxTimeline :items="recentAlarms" />
-    </PxSection>
+    <UxSection title="最近告警" icon="!" :count="recentAlarms.length" :icon-color="palette.danger">
+      <UxTimeline :items="recentAlarms" />
+    </UxSection>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useTheme } from '../components/useTheme'
-import PxPageHeader from '../components/PxPageHeader.vue'
-import PxStatusBadge from '../components/PxStatusBadge.vue'
-import PxSection from '../components/PxSection.vue'
-import PxStatCard from '../components/PxStatCard.vue'
-import PxSparkline from '../components/PxSparkline.vue'
-import PxGaugeRing from '../components/PxGaugeRing.vue'
-import PxLedBit from '../components/PxLedBit.vue'
-import PxTimeline from '../components/PxTimeline.vue'
+import { useTheme } from '@/components/ux/useTheme'
+import UxPageHeader from '@/components/ux/UxPageHeader.vue'
+import UxStatusBadge from '@/components/ux/UxStatusBadge.vue'
+import UxSection from '@/components/ux/UxSection.vue'
+import UxStatCard from '@/components/ux/UxStatCard.vue'
+import UxSparkline from '@/components/ux/UxSparkline.vue'
+import UxGaugeRing from '@/components/ux/UxGaugeRing.vue'
+import UxLedBit from '@/components/ux/UxLedBit.vue'
+import UxTimeline from '@/components/ux/UxTimeline.vue'
 import {
   mockDevice,
   kpiPoints,

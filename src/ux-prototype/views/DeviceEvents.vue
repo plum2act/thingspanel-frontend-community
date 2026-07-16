@@ -1,13 +1,13 @@
 <template>
   <div class="ux-page" :style="{ background: palette.bg0, color: palette.text1 }">
-    <PxPageHeader
+    <UxPageHeader
       :title="mockDevice.name + ' · 事件流'"
       :online="mockDevice.online"
       :device-number="mockDevice.deviceNumber"
       @back="goBack"
     />
 
-    <PxSection title="事件流" icon="→" :count="mockEvents.length" :icon-color="palette.info">
+    <UxSection title="事件流" icon="→" :count="mockEvents.length" :icon-color="palette.info">
       <div class="ux-events">
         <div
           v-for="e in mockEvents"
@@ -26,14 +26,14 @@
           </div>
         </div>
       </div>
-    </PxSection>
+    </UxSection>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useTheme } from '../components/useTheme'
-import PxPageHeader from '../components/PxPageHeader.vue'
-import PxSection from '../components/PxSection.vue'
+import { useTheme } from '@/components/ux/useTheme'
+import UxPageHeader from '@/components/ux/UxPageHeader.vue'
+import UxSection from '@/components/ux/UxSection.vue'
 import { mockDevice } from '../mocks/device'
 import { mockEvents } from '../mocks/events'
 

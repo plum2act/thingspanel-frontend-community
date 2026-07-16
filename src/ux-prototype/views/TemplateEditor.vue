@@ -85,7 +85,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useTheme } from '../components/useTheme'
+import { useTheme } from '@/components/ux/useTheme'
 import { mockTemplate } from '../mocks/templates'
 
 const { palette } = useTheme()

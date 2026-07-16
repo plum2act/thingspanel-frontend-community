@@ -35,17 +35,17 @@
       </div>
     </div>
 
-    <PxSection title="告警时间线" icon="!" :count="mockAlarms.length" :icon-color="palette.danger">
-      <PxTimeline :items="mockAlarms" />
-    </PxSection>
+    <UxSection title="告警时间线" icon="!" :count="mockAlarms.length" :icon-color="palette.danger">
+      <UxTimeline :items="mockAlarms" />
+    </UxSection>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useTheme } from '../components/useTheme'
-import PxSection from '../components/PxSection.vue'
-import PxTimeline from '../components/PxTimeline.vue'
+import { useTheme } from '@/components/ux/useTheme'
+import UxSection from '@/components/ux/UxSection.vue'
+import UxTimeline from '@/components/ux/UxTimeline.vue'
 import { mockAlarms } from '../mocks/alarms'
 
 const { palette } = useTheme()

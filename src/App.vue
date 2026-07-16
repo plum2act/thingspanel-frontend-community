@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted } from 'vue'
+import { computed, onBeforeUnmount, onMounted, watch } from 'vue'
 import { NConfigProvider, darkTheme } from 'naive-ui'
 import { useFullscreen } from '@vueuse/core'
 import json from 'highlight.js/lib/languages/json'
@@ -10,6 +10,8 @@ import { naiveDateLocales, naiveLocales } from './locales/naive'
 import Content from './components/content/index.vue'
 import { uxPrototypeRoutes } from './ux-prototype/router'
 import { useRouter } from 'vue-router'
+import { useTheme } from '@/components/ux/useTheme'
+import { naiveBridgeForTheme } from '@/components/ux/UxNaiveBridge'
 
 hljs.registerLanguage('json', json)
 
@@ -21,7 +23,14 @@ const appStore = useAppStore()
 const themeStore = useThemeStore()
 const router = useRouter()
 const { isFullscreen, toggle } = useFullscreen()
-const naiveDarkTheme = computed(() => (themeStore.darkMode ? darkTheme : undefined))
+
+/**
+ * Ux palette 是 Phase 3 的唯一权威主题源。
+ * Naive UI 的 darkMode 和 themeStore.themeScheme 都由 uxThemeName 单向控制。
+ */
+const { themeName: uxThemeName } = useTheme()
+
+const naiveDarkTheme = computed(() => (uxThemeName.value === 'dark' ? darkTheme : undefined))
 
 const naiveLocale = computed(() => {
   return naiveLocales[appStore.locale]
@@ -30,6 +39,32 @@ const naiveLocale = computed(() => {
 const naiveDateLocale = computed(() => {
   return naiveDateLocales[appStore.locale]
 })
+
+/**
+ * Ux palette → Naive theme 桥接
+ *
+ * 把 palette 5 阶 + body/card/border/text 等体层中性色注入 NConfigProvider.themeOverrides，
+ * 让所有原生 Naive 控件（按钮、标签、卡片、表格、输入、选择）继承品牌色。
+ */
+const naiveThemeOverrides = computed(() => {
+  const uxBridge = naiveBridgeForTheme(uxThemeName.value)
+  return {
+    ...themeStore.naiveTheme,
+    common: {
+      ...themeStore.naiveTheme.common,
+      ...uxBridge
+    }
+  }
+})
+
+// 双向同步：uxThemeName 变化时同步写入 themeStore.themeScheme，
+// 避免用户在 theme-drawer 那里看到的「light/dark/auto」与 palette 撕裂。
+watch(uxThemeName, val => {
+  if (val !== 'light' && val !== 'dark') return
+  if (themeStore.settings.themeScheme !== val) {
+    themeStore.setThemeScheme(val as 'light' | 'dark')
+  }
+}, { immediate: true })
 
 /**
  * 🔥 修复：禁用全局全屏监听器
@@ -67,7 +102,7 @@ onMounted(() => {
   <NConfigProvider
     :hljs="hljs"
     :theme="naiveDarkTheme"
-    :theme-overrides="themeStore.naiveTheme"
+    :theme-overrides="naiveThemeOverrides"
     :locale="naiveLocale"
     :date-locale="naiveDateLocale"
     class="h-full"
