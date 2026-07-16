@@ -1,5 +1,7 @@
 <!-- eslint-disable require-atomic-updates -->
 <script setup lang="tsx">
+import { useTheme } from '@/components/ux/useTheme'
+import UxPageHeader from '@/components/ux/UxPageHeader.vue'
 import { ref, watch } from 'vue'
 import { NButton, NPopconfirm, NSpace, NTag } from 'naive-ui'
 import { delRegisterService, getServices } from '@/service/api/plugin'
@@ -158,9 +160,18 @@ watch(
 )
 
 getList()
+
+
+const { palette } = useTheme()
 </script>
 
 <template>
+    <UxPageHeader
+      class="page-ux-header"
+      title="应用插件"
+      :online="true"
+      @back="() => history.back()"
+    />
   <div>
     <NCard :title="$t('route.apply_in')" :bordered="false" class="h-full rounded-8px shadow-sm">
       <div class="header">

@@ -1,4 +1,6 @@
 <script setup lang="tsx">
+import { useTheme } from '@/components/ux/useTheme'
+import UxPageHeader from '@/components/ux/UxPageHeader.vue'
 import { reactive, ref } from 'vue'
 import type { Ref } from 'vue'
 import { NButton, NPopconfirm, NSpace, NTag } from 'naive-ui'
@@ -152,9 +154,18 @@ function init() {
 
 // 初始化
 init()
+
+
+const { palette } = useTheme()
 </script>
 
 <template>
+    <UxPageHeader
+      class="page-ux-header"
+      title="规则引擎"
+      :online="true"
+      @back="() => history.back()"
+    />
   <NCard :title="$t('generate.rule-engine')" :bordered="false" class="h-full rounded-8px shadow-sm">
     <template #header-extra>
       <NButton @click="handleAddTable">{{ $t('generate.create-access-rule') }}</NButton>

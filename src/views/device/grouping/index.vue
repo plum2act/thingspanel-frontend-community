@@ -1,4 +1,6 @@
 <script lang="tsx" setup>
+import { useTheme } from '@/components/ux/useTheme'
+import UxPageHeader from '@/components/ux/UxPageHeader.vue'
 import { onMounted, ref } from 'vue'
 // Import UI components from Naive UI
 import { useRouter } from 'vue-router'
@@ -72,9 +74,18 @@ const showModal = () => {
   }
 }
 onMounted(getDevice) // Fetch device groups on component mount
+
+
+const { palette } = useTheme()
 </script>
 
 <template>
+    <UxPageHeader
+      class="page-ux-header"
+      title="设备分组"
+      :online="true"
+      @back="() => history.back()"
+    />
   <div class="h-full overflow-auto">
     <!-- Add or edit device modal component with props for edit mode and data -->
     <AddOrEditDevices ref="the_modal" :is-edit="false" :refresh-data="getDevice" />

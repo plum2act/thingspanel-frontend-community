@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import { useTheme } from '@/components/ux/useTheme'
+import UxPageHeader from '@/components/ux/UxPageHeader.vue'
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { NButton } from 'naive-ui'
@@ -72,9 +74,18 @@ const clickConfig: () => void = () => {
     }
   })
 }
+
+
+const { palette } = useTheme()
 </script>
 
 <template>
+    <UxPageHeader
+      class="page-ux-header"
+      title="设备配置详情"
+      :online="true"
+      @back="() => history.back()"
+    />
   <div class="h-full overflow-auto">
     <NCard :title="configForm?.name || '--'">
       <template #header-extra>
