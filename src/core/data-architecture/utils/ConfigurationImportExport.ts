@@ -468,7 +468,7 @@ export class ConfigurationImporter {
           version: config.version,
           exportTime: config.exportTime,
           componentType: config.metadata?.componentType || '',
-          exportSource: config.metadata?.exportSource || 'ThingsPanel'
+          exportSource: config.metadata?.exportSource || 'KyEMS'
         },
         statistics: {
           dataSourceCount: config.metadata?.statistics?.dataSourceCount || 0,

@@ -12,7 +12,7 @@ export * from './security'
  */
 export const configInfo = {
   version: '1.0.0',
-  description: 'ThingsPanel Frontend Configuration Module',
+  description: 'KyEMS Frontend Configuration Module',
   modules: ['security'],
   lastUpdated: new Date().toISOString(),
 } as const

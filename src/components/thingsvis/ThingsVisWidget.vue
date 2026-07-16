@@ -650,7 +650,7 @@ const postPlatformWriteResult = (
 
 /**
  * Handle tv:platform-write messages posted by the embedded ThingsVis iframe.
- * Routes the write payload to the ThingsPanel telemetry publish API.
+ * Routes the write payload to the KyEMS telemetry publish API.
  */
 const handlePlatformWrite = async (event: MessageEvent) => {
   if (event.data?.type !== 'tv:platform-write') return

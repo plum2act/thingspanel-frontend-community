@@ -78,10 +78,19 @@ const columns: DataTableColumns<AlarmData> = [
   {
     key: 'alarm_status',
     title: $t('generate.alarm-status'),
-    width: 90,
+    width: 120,
     render(row) {
       const statusInfo = getStatusInfo(row.alarm_status)
-      return h(NTag, { type: statusInfo.type, size: 'small', round: true }, { default: () => statusInfo.label })
+      return h(
+        NTag,
+        {
+          type: statusInfo.type,
+          size: 'small',
+          round: true,
+          class: `alarm-tag alarm-tag--${statusInfo.type}`
+        },
+        { default: () => statusInfo.label }
+      )
     }
   },
   {
@@ -129,4 +138,33 @@ onMounted(() => {
 })
 </script>
 
-<style scoped></style>
+<style scoped>
+.alarm-tag {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.alarm-tag--error {
+  background-color: #ef4444 !important;
+  color: #ffffff !important;
+  border: none;
+}
+
+.alarm-tag--warning {
+  background-color: #f59e0b !important;
+  color: #ffffff !important;
+  border: none;
+}
+
+.alarm-tag--info {
+  background-color: #3b82f6 !important;
+  color: #ffffff !important;
+  border: none;
+}
+
+.alarm-tag--success {
+  background-color: #22c55e !important;
+  color: #ffffff !important;
+  border: none;
+}
+</style>

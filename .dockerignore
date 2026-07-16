@@ -1,0 +1,7 @@
+# Dockerfile 仅 COPY dist 与 nginx.conf，其余全部排除以最小化 build context
+# （node_modules ~1.9G、.git ~300M 不应进入镜像层）
+*
+!dist
+!nginx.conf
+!Dockerfile
+!.dockerignore

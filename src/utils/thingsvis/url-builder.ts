@@ -83,20 +83,20 @@ export async function buildThingsVisUrl(options: ThingsVisUrlOptions): Promise<s
       params.set('token', thingsvisToken)
       console.log('✅ SSO token 获取成功, length:', thingsvisToken.length)
     } else {
-      // 降级：使用 ThingsPanel token
+      // 降级：使用 KyEMS token
       const tpToken = localStg.get('token')
       if (tpToken) {
         params.set('token', tpToken)
-        console.warn('⚠️ SSO 失败，降级使用 ThingsPanel token')
+        console.warn('⚠️ SSO 失败，降级使用 KyEMS token')
       }
     }
   } catch (error) {
     console.error('❌ SSO token exchange failed:', error)
-    // 降级：使用 ThingsPanel token
+    // 降级：使用 KyEMS token
     const tpToken = localStg.get('token')
     if (tpToken) {
       params.set('token', tpToken)
-      console.warn('⚠️ 降级使用 ThingsPanel token')
+      console.warn('⚠️ 降级使用 KyEMS token')
     }
   }
 

@@ -9,8 +9,8 @@ interface VersionInfoSnapshot {
 }
 
 const DEFAULT_VERSION = '--'
-const LATEST_VERSION_CACHE_KEY = 'thingspanel_latest_version_cache_v1'
-const LEGACY_CACHE_KEYS = ['thingspanel_version_info_cache', 'thingspanel_latest_version_cache']
+const LATEST_VERSION_CACHE_KEY = 'kyems_latest_version_cache_v1'
+const LEGACY_CACHE_KEYS = ['thingspanel_version_info_cache', 'thingspanel_latest_version_cache', 'kyems_latest_version_cache']
 const LATEST_VERSION_CACHE_TTL = 12 * 60 * 60 * 1000
 
 let versionInfoCache: VersionInfoSnapshot | null = null
@@ -68,22 +68,15 @@ async function fetchVersionInfo(): Promise<VersionInfoSnapshot> {
 
   versionInfoPending = Promise.allSettled([
     getSysVersion(),
-    cachedLatestVersion === DEFAULT_VERSION
-      ? axios.get('https://api.github.com/repos/ThingsPanel/thingspanel-frontend-community/tags')
-      : Promise.resolve({ data: [{ name: cachedLatestVersion }] })
+    Promise.resolve({ data: [] })
   ])
-    .then(([currentResult, latestResult]) => {
+    .then(([currentResult]) => {
       const currentVersion =
         currentResult.status === 'fulfilled'
           ? normalizeVersion(currentResult.value?.data?.version)
           : DEFAULT_VERSION
 
-      const latestVersion =
-        latestResult.status === 'fulfilled'
-          ? normalizeVersion(latestResult.value?.data?.[0]?.name)
-          : cachedLatestVersion
-
-      setCachedLatestVersion(latestVersion)
+      const latestVersion = currentVersion
 
       versionInfoCache = {
         currentVersion,

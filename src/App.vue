@@ -8,6 +8,8 @@ import { useAppStore } from './store/modules/app'
 import { useThemeStore } from './store/modules/theme'
 import { naiveDateLocales, naiveLocales } from './locales/naive'
 import Content from './components/content/index.vue'
+import { uxPrototypeRoutes } from './ux-prototype/router'
+import { useRouter } from 'vue-router'
 
 hljs.registerLanguage('json', json)
 
@@ -17,6 +19,7 @@ defineOptions({
 
 const appStore = useAppStore()
 const themeStore = useThemeStore()
+const router = useRouter()
 const { isFullscreen, toggle } = useFullscreen()
 const naiveDarkTheme = computed(() => (themeStore.darkMode ? darkTheme : undefined))
 
@@ -52,6 +55,12 @@ const naiveDateLocale = computed(() => {
 // onBeforeUnmount(() => {
 //   document.removeEventListener('fullscreenchange', handleFullScreenChange)
 // })
+
+// 注册 UX 原型路由：启动时动态注入 /ux-prototype/* 路由
+// 移除整个 src/ux-prototype/ 目录即自动下线所有原型路由
+onMounted(() => {
+  uxPrototypeRoutes.forEach(r => router.addRoute(r))
+})
 </script>
 
 <template>

@@ -290,7 +290,7 @@ export class ScriptContextManager implements IScriptContextManager {
    */
   private createDefaultContext(): void {
     const context = this.createContext('默认上下文', {
-      appName: 'ThingsPanel',
+      appName: 'KyEMS',
       version: '1.0.0',
       environment: process.env.NODE_ENV || 'development',
       currentUser: {

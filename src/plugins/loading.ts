@@ -2,7 +2,7 @@
 import { getRgbOfColor } from '@sa/utils'
 import { $t } from '@/locales'
 import { localStg } from '@/utils/storage'
-import systemLogo from '@/assets/svg-icon/logo.svg?raw'
+import systemLogoUrl from '@/assets/logo.png'
 
 export function setupLoading() {
   const app = document.getElementById('app')
@@ -28,7 +28,7 @@ export function setupLoading() {
 
   const logoWithClass = logoLoading
     ? `<img src="${logoLoading}" style="max-width: 88px; height: auto">`
-    : systemLogo.replace('<svg', `<svg class="size-128px text-primary"`)
+    : `<img src="${systemLogoUrl}" class="size-128px" style="max-width: 128px; height: auto">`
 
   const dot = loadingClasses
     .map(item => {

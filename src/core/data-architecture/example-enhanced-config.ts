@@ -100,7 +100,7 @@ export const httpDataItemExample: DataItemConfig<EnhancedHttpDataItemConfig> = {
       },
       {
         key: 'User-Agent',
-        value: 'ThingsPanel/1.0',
+        value: 'KyEMS/1.0',
         enabled: true,
         isDynamic: false
       },

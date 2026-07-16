@@ -391,7 +391,7 @@ onMounted(() => {
 }
 
 .color-ye {
-  color: #dca550;
+  color: #b45309;
 }
 
 .color-ye-bg {

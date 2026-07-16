@@ -103,20 +103,28 @@ const customRequest = ({ file, event }: { file: UploadFileInfo; event?: Progress
 }
 
 // 新增设备功能模板
-const next: () => void = async () => {
-  await formRef.value?.validate()
-  if (addFrom.id) {
+const runStep1Next: () => Promise<boolean> = async () => {
+  try {
+    await formRef.value?.validate()
+  } catch {
+    return false
+  }
+  try {
     addFrom.label = addFrom.templateTage.join(',')
-    const response: any = await putTemplat(addFrom)
-    emit('update:stepCurrent', 2)
+    const response: any = addFrom.id ? await putTemplat(addFrom) : await addTemplat(addFrom)
     emit('update:deviceTemplateId', response.data.id)
-  } else {
-    addFrom.label = addFrom.templateTage.join(',')
-    const response: any = await addTemplat(addFrom)
-    emit('update:stepCurrent', 2)
-    emit('update:deviceTemplateId', response.data.id)
+    return true
+  } catch {
+    return false
   }
 }
+
+const next: () => void = async () => {
+  const ok = await runStep1Next()
+  if (ok) emit('update:stepCurrent', 2)
+}
+
+defineExpose({ runStep1Next })
 
 const cancellation: () => void = () => {
   emit('update:modalVisible', false)

@@ -1,6 +1,6 @@
 /**
  * ThingsVis SSO Authentication Service
- * 实现 ThingsPanel Token 与 ThingsVis JWT Token 的交换
+ * 实现 KyEMS Token 与 ThingsVis JWT Token 的交换
  */
 
 import { localStg } from '@/utils/storage'
@@ -92,7 +92,7 @@ export class ThingsVisAuthService {
   }
 
   /**
-   * 交换 ThingsPanel Token -> ThingsVis Token
+   * 交换 KyEMS Token -> ThingsVis Token
    */
   async exchangeToken(): Promise<string> {
     try {
@@ -105,14 +105,14 @@ export class ThingsVisAuthService {
         )
       }
 
-      // 1. 获取当前 ThingsPanel 用户信息
+      // 1. 获取当前 KyEMS 用户信息
       // 注意：首次登录时，userInfo 可能尚未写入 localStorage（竞态条件）
       // 需要等待 userInfo 就绪
       const tpToken = localStg.get('token')
       const userInfo = await this.waitForUserInfo()
 
       if (!tpToken) {
-        throw new Error('ThingsPanel token not found')
+        throw new Error('KyEMS token not found')
       }
 
       if (!userInfo) {
@@ -129,12 +129,12 @@ export class ThingsVisAuthService {
         userInfo: {
           id: userInfo.userId || userInfo.id || '',
           email: userInfo.email || `${userInfo.userName}@thingspanel.local`,
-          name: userInfo.userName || 'ThingsPanel User',
+          name: userInfo.userName || 'KyEMS User',
           tenantId: resolvedSpaceId
         }
       }
 
-      // 3. 映射 ThingsPanel authority → ThingsVis role，用于注册时初始化默认看板
+      // 3. 映射 KyEMS authority → ThingsVis role，用于注册时初始化默认看板
       const authority = userInfo.authority
       let role: SSOExchangeRequest['role']
 

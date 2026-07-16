@@ -71,7 +71,7 @@ export interface PlatformDataMessage {
 export interface SSOExchangeRequest {
   /** 平台标识 */
   platform: 'thingspanel'
-  /** ThingsPanel JWT Token */
+  /** KyEMS JWT Token */
   platformToken: string
   /** 用户信息 */
   userInfo: {

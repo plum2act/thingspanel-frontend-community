@@ -243,7 +243,6 @@ export class ComponentLoader implements IComponentLoader {
       'online-trend',
       'tenant-count',
       'system-metrics-history',
-      'version-info',
       'news-info',
       'recently-visited',
       'reported-data',
