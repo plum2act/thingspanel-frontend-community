@@ -1,6 +1,6 @@
 <template>
   <div class="ux-page" :style="{ background: palette.bg0, color: palette.text1 }">
-    <UxPageHeader
+    <PxPageHeader
       :title="mockDevice.name + ' · 告警'"
       :online="mockDevice.online"
       :diagnosis="mockDevice.diagnosis"
@@ -8,17 +8,17 @@
       @back="goBack"
     />
 
-    <UxSection title="告警时间线" icon="!" :count="mockAlarms.length" :icon-color="palette.danger">
-      <UxTimeline :items="mockAlarms" />
-    </UxSection>
+    <PxSection title="告警时间线" icon="!" :count="mockAlarms.length" :icon-color="palette.danger">
+      <PxTimeline :items="mockAlarms" />
+    </PxSection>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useTheme } from '@/components/ux/useTheme'
-import UxPageHeader from '@/components/ux/UxPageHeader.vue'
-import UxSection from '@/components/ux/UxSection.vue'
-import UxTimeline from '@/components/ux/UxTimeline.vue'
+import { useTheme } from '../components/useTheme'
+import PxPageHeader from '../components/PxPageHeader.vue'
+import PxSection from '../components/PxSection.vue'
+import PxTimeline from '../components/PxTimeline.vue'
 import { mockDevice } from '../mocks/device'
 import { mockAlarms } from '../mocks/alarms'
 

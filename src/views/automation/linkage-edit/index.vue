@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { useTheme } from '@/components/ux/useTheme'
-import UxPageHeader from '@/components/ux/UxPageHeader.vue'
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { FormInst } from 'naive-ui'
@@ -354,18 +352,9 @@ if (configId.value) {
   typeof configId.value === 'string' ? (configForm.value.id = configId.value) : ''
   getSceneAutomationsInfo()
 }
-
-
-const { palette } = useTheme()
 </script>
 
 <template>
-    <UxPageHeader
-      class="page-ux-header"
-      title="联动编辑"
-      :online="true"
-      @back="() => history.back()"
-    />
   <div class="linkage-edit">
     <NCard
       :bordered="false"

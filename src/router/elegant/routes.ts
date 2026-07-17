@@ -37,6 +37,17 @@ export const generatedRoutes: GeneratedRoute[] = [
     }
   },
   {
+    name: 'about',
+    path: '/about',
+    component: 'layout.base$view.about',
+    meta: {
+      title: 'about',
+      i18nKey: 'route.about',
+      icon: 'fluent:book-information-24-regular',
+      order: 10
+    }
+  },
+  {
     name: 'alarm',
     path: '/alarm',
     component: 'layout.base',
@@ -146,6 +157,44 @@ export const generatedRoutes: GeneratedRoute[] = [
         meta: {
           title: 'automation_scene-manage',
           i18nKey: 'route.automation_scene-manage'
+        }
+      }
+    ]
+  },
+  {
+    name: 'component',
+    path: '/component',
+    component: 'layout.base',
+    meta: {
+      title: 'component',
+      i18nKey: 'route.component'
+    },
+    children: [
+      {
+        name: 'component_button',
+        path: '/component/button',
+        component: 'view.component_button',
+        meta: {
+          title: 'component_button',
+          i18nKey: 'route.component_button'
+        }
+      },
+      {
+        name: 'component_card',
+        path: '/component/card',
+        component: 'view.component_card',
+        meta: {
+          title: 'component_card',
+          i18nKey: 'route.component_card'
+        }
+      },
+      {
+        name: 'component_table',
+        path: '/component/table',
+        component: 'view.component_table',
+        meta: {
+          title: 'component_table',
+          i18nKey: 'route.component_table'
         }
       }
     ]
@@ -338,6 +387,88 @@ export const generatedRoutes: GeneratedRoute[] = [
     }
   },
   {
+    name: 'function',
+    path: '/function',
+    component: 'layout.base',
+    meta: {
+      title: 'function',
+      i18nKey: 'route.function',
+      icon: 'icon-park-outline:all-application',
+      order: 6
+    },
+    children: [
+      {
+        name: 'function_hide-child',
+        path: '/function/hide-child',
+        meta: {
+          title: 'function_hide-child',
+          i18nKey: 'route.function_hide-child',
+          icon: 'material-symbols:filter-list-off'
+        },
+        redirect: '/function/hide-child/one',
+        children: [
+          {
+            name: 'function_hide-child_one',
+            path: '/function/hide-child/one',
+            component: 'view.function_hide-child_one',
+            meta: {
+              title: 'function_hide-child_one',
+              i18nKey: 'route.function_hide-child_one',
+              icon: 'material-symbols:filter-list-off',
+              hideInMenu: true,
+              activeMenu: 'function_hide-child'
+            }
+          },
+          {
+            name: 'function_hide-child_three',
+            path: '/function/hide-child/three',
+            component: 'view.function_hide-child_three',
+            meta: {
+              title: 'function_hide-child_three',
+              i18nKey: 'route.function_hide-child_three',
+              hideInMenu: true,
+              activeMenu: 'function_hide-child'
+            }
+          },
+          {
+            name: 'function_hide-child_two',
+            path: '/function/hide-child/two',
+            component: 'view.function_hide-child_two',
+            meta: {
+              title: 'function_hide-child_two',
+              i18nKey: 'route.function_hide-child_two',
+              hideInMenu: true,
+              activeMenu: 'function_hide-child'
+            }
+          }
+        ]
+      },
+      {
+        name: 'function_multi-tab',
+        path: '/function/multi-tab',
+        component: 'view.function_multi-tab',
+        meta: {
+          title: 'function_multi-tab',
+          i18nKey: 'route.function_multi-tab',
+          icon: 'ic:round-tab',
+          multiTab: true,
+          hideInMenu: true,
+          activeMenu: 'function_tab'
+        }
+      },
+      {
+        name: 'function_tab',
+        path: '/function/tab',
+        component: 'view.function_tab',
+        meta: {
+          title: 'function_tab',
+          i18nKey: 'route.function_tab',
+          icon: 'ic:round-tab'
+        }
+      }
+    ]
+  },
+  {
     name: 'home',
     path: '/home',
     component: 'layout.base$view.home',
@@ -498,6 +629,68 @@ export const generatedRoutes: GeneratedRoute[] = [
     ]
   },
   {
+    name: 'multi-menu',
+    path: '/multi-menu',
+    component: 'layout.base',
+    meta: {
+      title: 'multi-menu',
+      i18nKey: 'route.multi-menu',
+      order: 8
+    },
+    children: [
+      {
+        name: 'multi-menu_first',
+        path: '/multi-menu/first',
+        meta: {
+          title: 'multi-menu_first',
+          i18nKey: 'route.multi-menu_first',
+          order: 1
+        },
+        children: [
+          {
+            name: 'multi-menu_first_child',
+            path: '/multi-menu/first/child',
+            component: 'view.multi-menu_first_child',
+            meta: {
+              title: 'multi-menu_first_child',
+              i18nKey: 'route.multi-menu_first_child'
+            }
+          }
+        ]
+      },
+      {
+        name: 'multi-menu_second',
+        path: '/multi-menu/second',
+        meta: {
+          title: 'multi-menu_second',
+          i18nKey: 'route.multi-menu_second',
+          order: 2
+        },
+        children: [
+          {
+            name: 'multi-menu_second_child',
+            path: '/multi-menu/second/child',
+            meta: {
+              title: 'multi-menu_second_child',
+              i18nKey: 'route.multi-menu_second_child'
+            },
+            children: [
+              {
+                name: 'multi-menu_second_child_home',
+                path: '/multi-menu/second/child/home',
+                component: 'view.multi-menu_second_child_home',
+                meta: {
+                  title: 'multi-menu_second_child_home',
+                  i18nKey: 'route.multi-menu_second_child_home'
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
     name: 'personal-center',
     path: '/personal-center',
     component: 'layout.base$view.personal-center',
@@ -505,6 +698,127 @@ export const generatedRoutes: GeneratedRoute[] = [
       title: 'personal-center',
       i18nKey: 'route.personal-center'
     }
+  },
+  {
+    name: 'plugin',
+    path: '/plugin',
+    component: 'layout.base',
+    meta: {
+      title: 'plugin',
+      i18nKey: 'route.plugin'
+    },
+    children: [
+      {
+        name: 'plugin_charts',
+        path: '/plugin/charts',
+        meta: {
+          title: 'plugin_charts',
+          i18nKey: 'route.plugin_charts'
+        },
+        children: [
+          {
+            name: 'plugin_charts_antv',
+            path: '/plugin/charts/antv',
+            component: 'view.plugin_charts_antv',
+            meta: {
+              title: 'plugin_charts_antv',
+              i18nKey: 'route.plugin_charts_antv'
+            }
+          },
+          {
+            name: 'plugin_charts_echarts',
+            path: '/plugin/charts/echarts',
+            component: 'view.plugin_charts_echarts',
+            meta: {
+              title: 'plugin_charts_echarts',
+              i18nKey: 'route.plugin_charts_echarts'
+            }
+          }
+        ]
+      },
+      {
+        name: 'plugin_copy',
+        path: '/plugin/copy',
+        component: 'view.plugin_copy',
+        meta: {
+          title: 'plugin_copy',
+          i18nKey: 'route.plugin_copy'
+        }
+      },
+      {
+        name: 'plugin_editor',
+        path: '/plugin/editor',
+        meta: {
+          title: 'plugin_editor',
+          i18nKey: 'route.plugin_editor'
+        },
+        children: [
+          {
+            name: 'plugin_editor_markdown',
+            path: '/plugin/editor/markdown',
+            component: 'view.plugin_editor_markdown',
+            meta: {
+              title: 'plugin_editor_markdown',
+              i18nKey: 'route.plugin_editor_markdown'
+            }
+          },
+          {
+            name: 'plugin_editor_quill',
+            path: '/plugin/editor/quill',
+            component: 'view.plugin_editor_quill',
+            meta: {
+              title: 'plugin_editor_quill',
+              i18nKey: 'route.plugin_editor_quill'
+            }
+          }
+        ]
+      },
+      {
+        name: 'plugin_icon',
+        path: '/plugin/icon',
+        component: 'view.plugin_icon',
+        meta: {
+          title: 'plugin_icon',
+          i18nKey: 'route.plugin_icon'
+        }
+      },
+      {
+        name: 'plugin_map',
+        path: '/plugin/map',
+        component: 'view.plugin_map',
+        meta: {
+          title: 'plugin_map',
+          i18nKey: 'route.plugin_map'
+        }
+      },
+      {
+        name: 'plugin_print',
+        path: '/plugin/print',
+        component: 'view.plugin_print',
+        meta: {
+          title: 'plugin_print',
+          i18nKey: 'route.plugin_print'
+        }
+      },
+      {
+        name: 'plugin_swiper',
+        path: '/plugin/swiper',
+        component: 'view.plugin_swiper',
+        meta: {
+          title: 'plugin_swiper',
+          i18nKey: 'route.plugin_swiper'
+        }
+      },
+      {
+        name: 'plugin_video',
+        path: '/plugin/video',
+        component: 'view.plugin_video',
+        meta: {
+          title: 'plugin_video',
+          i18nKey: 'route.plugin_video'
+        }
+      }
+    ]
   },
   {
     name: 'rule-engine',

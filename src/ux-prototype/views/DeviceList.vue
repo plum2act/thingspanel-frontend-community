@@ -43,10 +43,10 @@
         <div>{{ d.no }}</div>
         <div>{{ d.group }}</div>
         <div>
-          <UxStatusBadge :type="d.online ? 'online' : 'offline'" :text="d.online ? '在线' : '离线'" />
+          <PxStatusBadge :type="d.online ? 'online' : 'offline'" :text="d.online ? '在线' : '离线'" />
         </div>
         <div>
-          <UxStatusBadge v-if="d.warn" type="warn" :text="`${d.warnCount} 条`" />
+          <PxStatusBadge v-if="d.warn" type="warn" :text="`${d.warnCount} 条`" />
           <span v-else :style="{ color: palette.text3 }">—</span>
         </div>
         <div><code>{{ d.proto }}</code></div>
@@ -61,8 +61,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useTheme } from '@/components/ux/useTheme'
-import UxStatusBadge from '@/components/ux/UxStatusBadge.vue'
+import { useTheme } from '../components/useTheme'
+import PxStatusBadge from '../components/PxStatusBadge.vue'
 
 const { palette } = useTheme()
 const selectStyle = computed(() => ({

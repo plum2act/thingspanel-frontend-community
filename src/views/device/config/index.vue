@@ -1,6 +1,4 @@
 <script lang="tsx" setup>
-import { useTheme } from '@/components/ux/useTheme'
-import UxPageHeader from '@/components/ux/UxPageHeader.vue'
 import { onMounted, ref, computed, h, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import {
@@ -272,18 +270,9 @@ const availableViews = [
   { key: 'card', icon: CardIcon, label: 'common.viewCard' },
   { key: 'list', icon: ListOutline, label: 'common.viewList' }
 ]
-
-
-const { palette } = useTheme()
 </script>
 
 <template>
-    <UxPageHeader
-      class="page-ux-header"
-      title="设备配置"
-      :online="true"
-      @back="() => history.back()"
-    />
   <div class="p-4">
     <NTabs v-model:value="activeTab" type="line" animated>
       <NTabPane name="local" :tab="$t('device_template.localTemplates')">

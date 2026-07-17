@@ -1,6 +1,4 @@
 <script setup lang="tsx">
-import { useTheme } from '@/components/ux/useTheme'
-import UxPageHeader from '@/components/ux/UxPageHeader.vue'
 import { computed, getCurrentInstance, reactive, ref } from 'vue'
 import type { Ref } from 'vue'
 import { NButton, NPopconfirm, NSpace, NSwitch } from 'naive-ui'
@@ -145,18 +143,9 @@ const getPlatform = computed(() => {
   return proxy.getPlatform()
 })
 getTableData()
-
-
-const { palette } = useTheme()
 </script>
 
 <template>
-    <UxPageHeader
-      class="page-ux-header"
-      title="通知组"
-      :online="true"
-      @back="() => history.back()"
-    />
   <div>
     <NCard :title="$t('generate.notification-group')">
       <template #header-extra>

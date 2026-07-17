@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-import { useTheme } from '@/components/ux/useTheme'
-import UxPageHeader from '@/components/ux/UxPageHeader.vue'
 import { onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import type { AxiosError } from 'axios'
@@ -346,18 +344,9 @@ function handleDeviceTypeChange(newValue: string | number) {
 //   const { proxy }: any = getCurrentInstance();
 //   return proxy.getPlatform();
 // });
-
-
-const { palette } = useTheme()
 </script>
 
 <template>
-    <UxPageHeader
-      class="page-ux-header"
-      title="设备配置编辑"
-      :online="true"
-      @back="() => history.back()"
-    />
   <div class="overflow-y-auto">
     <NCard :title="`${$t(modalTitle)}${$t('custom.devicePage.configTemplate')}`">
       <NForm ref="configFormRef" :model="configForm" :rules="configFormRules" label-placement="left" label-width="auto">

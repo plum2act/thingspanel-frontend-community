@@ -25,17 +25,12 @@ import { useBoolean, useLoading } from '~/packages/hooks/src'
 // 导入SvgIcon组件，使用项目标准图标系统
 import SvgIcon from '@/components/custom/svg-icon.vue'
 import { getDemoServerUrl } from '@/utils/common/tool'
-import { useTheme } from '@/components/ux/useTheme'
-import UxPageHeader from '@/components/ux/UxPageHeader.vue'
 
 const route = useRoute()
 const { startLoading, endLoading, loading } = useLoading(false)
 const { bool: visible, setTrue: openModal } = useBoolean()
 const demoUrl = getDemoServerUrl()
 const url: any = ref(demoUrl)
-
-// Phase 6: Ux palette + chrome
-const { palette } = useTheme()
 
 // 查询参数
 const queryParams = reactive({
@@ -267,14 +262,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="device-template-page">
-    <UxPageHeader
-      class="device-template-ux-header"
-      :title="'物模型'"
-      subtitle="Device Templates"
-      :online="true"
-      @back="() => history.back()"
-    />
+  <div>
     <AdvancedListLayout
       :initial-view="'card'"
       :available-views="availableViews"

@@ -24,6 +24,7 @@ declare module "@elegant-router/types" {
     "403": "/403";
     "404": "/404";
     "500": "/500";
+    "about": "/about";
     "alarm": "/alarm";
     "alarm_notification-group": "/alarm/notification-group";
     "alarm_notification-record": "/alarm/notification-record";
@@ -36,6 +37,10 @@ declare module "@elegant-router/types" {
     "automation_scene-edit": "/automation/scene-edit";
     "automation_scene-linkage": "/automation/scene-linkage";
     "automation_scene-manage": "/automation/scene-manage";
+    "component": "/component";
+    "component_button": "/component/button";
+    "component_card": "/component/card";
+    "component_table": "/component/table";
     "dashboard": "/dashboard";
     "dashboard_analysis": "/dashboard/analysis";
     "dashboard_mobile-panel": "/dashboard/mobile-panel";
@@ -56,6 +61,13 @@ declare module "@elegant-router/types" {
     "device_service-details": "/device/service-details";
     "device_template": "/device/template";
     "device-details-app": "/device-details-app";
+    "function": "/function";
+    "function_hide-child": "/function/hide-child";
+    "function_hide-child_one": "/function/hide-child/one";
+    "function_hide-child_three": "/function/hide-child/three";
+    "function_hide-child_two": "/function/hide-child/two";
+    "function_multi-tab": "/function/multi-tab";
+    "function_tab": "/function/tab";
     "home": "/home";
     "login": "/login/:module(pwd-login|code-login|register|reset-pwd|bind-wechat)?";
     "manage": "/manage";
@@ -71,7 +83,26 @@ declare module "@elegant-router/types" {
     "management_route": "/management/route";
     "management_setting": "/management/setting";
     "management_user": "/management/user";
+    "multi-menu": "/multi-menu";
+    "multi-menu_first": "/multi-menu/first";
+    "multi-menu_first_child": "/multi-menu/first/child";
+    "multi-menu_second": "/multi-menu/second";
+    "multi-menu_second_child": "/multi-menu/second/child";
+    "multi-menu_second_child_home": "/multi-menu/second/child/home";
     "personal-center": "/personal-center";
+    "plugin": "/plugin";
+    "plugin_charts": "/plugin/charts";
+    "plugin_charts_antv": "/plugin/charts/antv";
+    "plugin_charts_echarts": "/plugin/charts/echarts";
+    "plugin_copy": "/plugin/copy";
+    "plugin_editor": "/plugin/editor";
+    "plugin_editor_markdown": "/plugin/editor/markdown";
+    "plugin_editor_quill": "/plugin/editor/quill";
+    "plugin_icon": "/plugin/icon";
+    "plugin_map": "/plugin/map";
+    "plugin_print": "/plugin/print";
+    "plugin_swiper": "/plugin/swiper";
+    "plugin_video": "/plugin/video";
     "rule-engine": "/rule-engine";
     "system-management-user": "/system-management-user";
     "system-management-user_system-log": "/system-management-user/system-log";
@@ -120,18 +151,23 @@ declare module "@elegant-router/types" {
     | "403"
     | "404"
     | "500"
+    | "about"
     | "alarm"
     | "apply"
     | "automation"
+    | "component"
     | "dashboard"
     | "data-service"
     | "device"
     | "device-details-app"
+    | "function"
     | "home"
     | "login"
     | "manage"
     | "management"
+    | "multi-menu"
     | "personal-center"
+    | "plugin"
     | "rule-engine"
     | "system-management-user"
     | "user-center"
@@ -157,6 +193,7 @@ declare module "@elegant-router/types" {
     | "404"
     | "500"
     | "login"
+    | "about"
     | "alarm_notification-group"
     | "alarm_notification-record"
     | "alarm_warning-message"
@@ -166,6 +203,9 @@ declare module "@elegant-router/types" {
     | "automation_scene-edit"
     | "automation_scene-linkage"
     | "automation_scene-manage"
+    | "component_button"
+    | "component_card"
+    | "component_table"
     | "dashboard_analysis"
     | "dashboard_mobile-panel"
     | "dashboard_panel"
@@ -183,6 +223,11 @@ declare module "@elegant-router/types" {
     | "device_service-access"
     | "device_service-details"
     | "device_template"
+    | "function_hide-child_one"
+    | "function_hide-child_three"
+    | "function_hide-child_two"
+    | "function_multi-tab"
+    | "function_tab"
     | "home"
     | "manage_menu"
     | "manage_role"
@@ -195,7 +240,19 @@ declare module "@elegant-router/types" {
     | "management_route"
     | "management_setting"
     | "management_user"
+    | "multi-menu_first_child"
+    | "multi-menu_second_child_home"
     | "personal-center"
+    | "plugin_charts_antv"
+    | "plugin_charts_echarts"
+    | "plugin_copy"
+    | "plugin_editor_markdown"
+    | "plugin_editor_quill"
+    | "plugin_icon"
+    | "plugin_map"
+    | "plugin_print"
+    | "plugin_swiper"
+    | "plugin_video"
     | "rule-engine"
     | "system-management-user_system-log"
     | "user-center"

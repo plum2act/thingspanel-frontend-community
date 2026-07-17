@@ -1,6 +1,4 @@
 <script setup lang="tsx">
-import { useTheme } from '@/components/ux/useTheme'
-import UxPageHeader from '@/components/ux/UxPageHeader.vue'
 import { ref } from 'vue'
 import type { Ref } from 'vue'
 import { NButton, NCard, NFlex, NPagination, NPopconfirm, NSpace, useDialog, useMessage } from 'naive-ui'
@@ -210,18 +208,9 @@ const logClose = () => {
   }
 }
 getData()
-
-
-const { palette } = useTheme()
 </script>
 
 <template>
-    <UxPageHeader
-      class="page-ux-header"
-      title="场景管理"
-      :online="true"
-      @back="() => history.back()"
-    />
   <div class="h-full w-full">
     <NCard>
       <NFlex justify="space-between" class="mb-4">

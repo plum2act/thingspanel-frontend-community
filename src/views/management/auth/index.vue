@@ -1,6 +1,4 @@
 <script setup lang="tsx">
-import { useTheme } from '@/components/ux/useTheme'
-import UxPageHeader from '@/components/ux/UxPageHeader.vue'
 import { h, reactive, ref } from 'vue'
 import type { Ref } from 'vue'
 import { NButton, NPopconfirm, NSpace, NTag } from 'naive-ui'
@@ -223,18 +221,9 @@ function init() {
 
 // 初始化
 init()
-
-
-const { palette } = useTheme()
 </script>
 
 <template>
-    <UxPageHeader
-      class="page-ux-header"
-      title="认证管理"
-      :online="true"
-      @back="() => history.back()"
-    />
   <div>
     <NCard :title="$t('page.manage.menu.title')" :bordered="false" class="h-full rounded-8px shadow-sm">
       <template #header-extra>

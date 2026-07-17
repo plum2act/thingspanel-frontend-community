@@ -1,6 +1,4 @@
 <script setup lang="tsx">
-import { useTheme } from '@/components/ux/useTheme'
-import UxPageHeader from '@/components/ux/UxPageHeader.vue'
 import { computed, getCurrentInstance, reactive, ref } from 'vue'
 import type { Ref } from 'vue'
 import { NButton, NPopconfirm, NSpace, NSwitch, NTag } from 'naive-ui'
@@ -285,18 +283,9 @@ const getPlatform = computed(() => {
 })
 // 初始化
 init()
-
-
-const { palette } = useTheme()
 </script>
 
 <template>
-    <UxPageHeader
-      class="page-ux-header"
-      title="API 管理"
-      :online="true"
-      @back="() => history.back()"
-    />
   <div>
     <n-card>
       <div class="h-full flex-col gap-15px">

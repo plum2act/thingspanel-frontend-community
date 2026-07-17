@@ -1,22 +1,11 @@
 <script setup lang="ts">
-import { useTheme } from '@/components/ux/useTheme'
-import UxPageHeader from '@/components/ux/UxPageHeader.vue'
 import { $t } from '@/locales'
 import ThemeSetting from './components/theme-setting.vue'
 import FunctionSetting from './components/function-setting.vue'
 import DataClearSetting from './components/data-clear-setting.vue'
-
-
-const { palette } = useTheme()
 </script>
 
 <template>
-    <UxPageHeader
-      class="page-ux-header"
-      title="系统设置"
-      :online="true"
-      @back="() => history.back()"
-    />
   <div class="overflow-hidden">
     <NCard :bordered="false" class="h-full rounded-8px shadow-sm">
       <div class="h-full flex-col">
