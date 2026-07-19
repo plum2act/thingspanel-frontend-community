@@ -31,7 +31,7 @@
             <span class="other-card__text">{{ formatText(i) }}</span>
           </template>
           <template v-else>
-            <MovingNumbers :data-index="i.key" :m-num="i.value" :quantile-show="true" />
+            <MovingNumbers :data-index="i.key" :m-num="roundNum(i.value)" :quantile-show="true" />
             <span v-if="i.unit" class="other-card__unit">{{ i.unit }}</span>
           </template>
         </div>
@@ -82,6 +82,13 @@ function formatText(i: Item): string {
   if (i.value == null || i.value === '') return '--'
   if (typeof i.value === 'object') return JSON.stringify(i.value)
   return String(i.value)
+}
+
+/** 数值最多保留 3 位小数（V0.0.5 解出的浮点常有长尾，如 12.3459999）。
+ *  非数值/非有限值原样透传（MovingNumbers 只在数值分支渲染）。 */
+function roundNum(v: any): any {
+  if (typeof v !== 'number' || !Number.isFinite(v)) return v
+  return Math.round(v * 1000) / 1000
 }
 </script>
 

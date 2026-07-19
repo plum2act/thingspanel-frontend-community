@@ -41,6 +41,10 @@ const modelType = ref<string>('')
 // 强制重挂载以重取数据——覆盖「弹窗已开时切换 key」与「同卡重复点击」两种场景。
 const historySeq = ref(0)
 
+// 最近一次手工刷新的时刻;纳入 latestRefreshMs,让点击后"最新刷新时间"立刻跳新。
+// 设备每 ~60s 才轮询入库新 ts,否则同一窗口内点击刷新显示时间不跳,看着像"没反应"。
+const lastRefreshMs = ref<number | null>(null)
+
 const formValue = ref('')
 const form = reactive({
   expected: false,
@@ -159,16 +163,20 @@ const openDialog = () => {
 }
 const fetchData = async () => {
   startLoading()
-  const { data, error } = await getTelemetryLogList({
-    page: log_page.value,
-    page_size: 5,
-    device_id: props.id,
-    operation_type: operationType.value,
-    status: sendResult.value
-  })
-  if (!error) {
-    tableData.value = data?.value || data.list
-    total.value = Math.ceil(data.count / 5)
+  try {
+    const { data, error } = await getTelemetryLogList({
+      page: log_page.value,
+      page_size: 5,
+      device_id: props.id,
+      operation_type: operationType.value,
+      status: sendResult.value
+    })
+    if (!error) {
+      tableData.value = data?.value || data.list
+      total.value = Math.ceil(data.count / 5)
+    }
+  } finally {
+    // 必须无条件结束 loading，否则日志接口报错会让刷新按钮常驻 loading 卡死
     endLoading()
   }
 }
@@ -195,10 +203,14 @@ const fetchTelemetry = async () => {
 }
 
 /** 手动刷新:重拉最新遥测 + 重发 WS 订阅(顺带自愈断连)+ 刷新日志。
- *  不引入定时器——WS 已每 ~60s 自动推送,这里只做补漏/自愈。 */
-const refreshData = () => {
-  fetchTelemetry()
-  fetchData()
+ *  不引入定时器——WS 已每 ~60s 自动推送,这里只做补漏/自愈。
+ *  V0.0.5 每 ~60s 才轮询入库,同一窗口内点击拿回的值/ts 可能不变,
+ *  故完成时弹 toast 让用户确认刷新已触发,避免误以为"按钮没用"。 */
+const refreshData = async () => {
+  // 先记刷新时刻,让"最新刷新时间"在点击后立刻跳新(无需等接口返回)
+  lastRefreshMs.value = Date.now()
+  await Promise.all([fetchTelemetry(), fetchData()])
+  window.$message?.success('已刷新最新数据')
 }
 
 const handlePositiveClick = async () => {
@@ -442,6 +454,11 @@ const latestRefreshMs = computed(() => {
     if (!t.isValid()) continue
     const ms = t.valueOf()
     if (latest === null || ms > latest) latest = ms
+  }
+  // 手工刷新后纳入刷新时刻——点击后"最新刷新时间"立刻跳到刷新瞬间,
+  // 直到设备下一轮 60s 轮询入库更新的 ts 把它顶过去。
+  if (lastRefreshMs.value !== null && (latest === null || lastRefreshMs.value > latest)) {
+    latest = lastRefreshMs.value
   }
   return latest
 })

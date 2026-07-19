@@ -17,6 +17,12 @@ const avgValue = ref<number | undefined>(undefined)
 const maxValue = ref<number | undefined>(undefined)
 const minValue = ref<number | undefined>(undefined)
 
+/** 数值显示最多 3 位小数(V0.0.5 解出的浮点常有长尾,如 235.4567891)。 */
+const fmtNum = (v: number | undefined | null): number | string => {
+  if (v === undefined || v === null || Number.isNaN(v)) return '-'
+  return Math.round(v * 1000) / 1000
+}
+
 interface Created {
   deviceId: string
   theKey: string
@@ -43,7 +49,8 @@ const columns = [
   },
   {
     title: (props.theName ? props.theName : props.theKey) + (props.theUnit ? `(${props.theUnit})` : ''),
-    key: 'y'
+    key: 'y',
+    render: row => fmtNum(row.y)
   }
 ]
 const pagination = reactive({
@@ -65,7 +72,7 @@ const initialOptions = ref({
     formatter(params) {
       let result = `${dayjs(params[0].value[0]).format('YYYY-MM-DD HH:mm:ss')}<br/>`
       params.forEach(param => {
-        result += `${param.marker} ${props.theName ? props.theName : props.theKey}: ${param.value[1]}${
+        result += `${param.marker} ${props.theName ? props.theName : props.theKey}: ${fmtNum(param.value[1])}${
           props.theUnit ? props.theUnit : ''
         }<br/>`
       })
@@ -545,8 +552,8 @@ onMounted(() => {
         </div>
         <div class="flex flex-row justify-between pl-4 pr-4 font-bold">
           <span>{{ $t('card.average') }}：{{ avgValue !== undefined ? avgValue.toFixed(2) : '-' }}</span>
-          <span>{{ $t('card.maxValue') }}：{{ maxValue !== undefined ? maxValue : '-' }}</span>
-          <span>{{ $t('card.minValue') }}：{{ minValue !== undefined ? minValue : '-' }}</span>
+          <span>{{ $t('card.maxValue') }}：{{ maxValue !== undefined ? fmtNum(maxValue) : '-' }}</span>
+          <span>{{ $t('card.minValue') }}：{{ minValue !== undefined ? fmtNum(minValue) : '-' }}</span>
         </div>
       </div>
     </div>

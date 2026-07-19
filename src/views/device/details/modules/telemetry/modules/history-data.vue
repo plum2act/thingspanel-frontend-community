@@ -100,6 +100,14 @@ const message = useMessage()
 const dateRange = ref<[number, number] | null>([params.start_time, params.end_time])
 
 // 修复类型实例化过深的问题
+
+/** 数值最多 3 位小数(V0.0.5 浮点长尾);非数值原样返回。 */
+const fmtNum = (v: any): string => {
+  const n = Number(v)
+  if (Number.isNaN(n)) return v == null ? '-' : String(v)
+  return String(Math.round(n * 1000) / 1000)
+}
+
 const columns = [
   {
     title: $t('common.time'),
@@ -113,7 +121,7 @@ const columns = [
   {
     title: $t('generate.fieldValue'),
     key: 'value',
-    render: (row: HistoryData) => row.value.toString()
+    render: (row: HistoryData) => fmtNum(row.value)
   }
 ]
 
