@@ -7,7 +7,14 @@
     </header>
 
     <div class="group-body">
-      <div v-for="it in items" :key="it.key" class="analog-card">
+      <div
+        v-for="it in items"
+        :key="it.key"
+        class="analog-card"
+        :class="typeof it.value === 'number' ? 'is-clickable' : ''"
+        :title="typeof it.value === 'number' ? '查看趋势' : undefined"
+        @click="onCardClick(it)"
+      >
         <div class="analog-card__title">{{ it.label || it.key }}</div>
 
         <div class="analog-card__ring-wrap">
@@ -68,6 +75,13 @@ const props = defineProps<{
   items: Item[]
   sparkBuffer: Record<string, Array<{ ts: number; value: number }>>
 }>()
+
+const emit = defineEmits<{ (e: 'view-history', item: Item): void }>()
+
+function onCardClick(it: Item) {
+  if (typeof it.value !== 'number') return
+  emit('view-history', it)
+}
 
 // 量程映射（按典型工程范围，可调）
 const RANGE_MAP: Record<string, [number, number, string]> = {
@@ -225,5 +239,9 @@ function formatNum(v: any): string {
   font-size: 11px;
   color: #999;
   width: 100%;
+}
+
+.analog-card.is-clickable {
+  cursor: pointer;
 }
 </style>

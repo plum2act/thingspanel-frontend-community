@@ -7,7 +7,14 @@
     </header>
 
     <div class="group-body">
-      <div v-for="it in items" :key="it.key" class="counter-card">
+      <div
+        v-for="it in items"
+        :key="it.key"
+        class="counter-card"
+        :class="typeof it.value === 'number' ? 'is-clickable' : ''"
+        :title="typeof it.value === 'number' ? '查看趋势' : undefined"
+        @click="onCardClick(it)"
+      >
         <div class="counter-card__title">{{ it.label || it.key }}</div>
         <div class="counter-card__value-row">
           <span class="counter-card__num">{{ formatNum(it.value) }}</span>
@@ -43,6 +50,13 @@ const props = defineProps<{
   items: Item[]
   sparkBuffer: Record<string, Array<{ ts: number; value: number }>>
 }>()
+
+const emit = defineEmits<{ (e: 'view-history', item: Item): void }>()
+
+function onCardClick(it: Item) {
+  if (typeof it.value !== 'number') return
+  emit('view-history', it)
+}
 
 function deltaText(it: Item): string {
   const buf = props.sparkBuffer[it.key] || []
@@ -173,5 +187,9 @@ function formatNum(v: any): string {
 .counter-card__foot {
   font-size: 11px;
   color: #999;
+}
+
+.counter-card.is-clickable {
+  cursor: pointer;
 }
 </style>

@@ -11,7 +11,12 @@
         v-for="(it, idx) in items"
         :key="it.key"
         class="temp-card"
-        :class="`temp-card--${phaseClass(idx)} temp-card--${tempLevel(it.value)}`"
+        :class="[
+          `temp-card--${phaseClass(idx)} temp-card--${tempLevel(it.value)}`,
+          typeof it.value === 'number' ? 'is-clickable' : ''
+        ]"
+        :title="typeof it.value === 'number' ? '查看趋势' : undefined"
+        @click="onCardClick(it)"
       >
         <div class="temp-card__phase">{{ phaseLabel(idx) }}</div>
         <div class="temp-card__value">
@@ -45,6 +50,13 @@ const props = defineProps<{
   items: Item[]
   sparkBuffer: Record<string, Array<{ ts: number; value: number }>>
 }>()
+
+const emit = defineEmits<{ (e: 'view-history', item: Item): void }>()
+
+function onCardClick(it: Item) {
+  if (typeof it.value !== 'number') return
+  emit('view-history', it)
+}
 
 function phaseLabel(idx: number): string {
   return ['A 相', 'B 相', 'C 相'][idx] || `相 ${idx + 1}`
@@ -220,5 +232,9 @@ function formatNum(v: any): string {
   .group-body {
     grid-template-columns: 1fr;
   }
+}
+
+.temp-card.is-clickable {
+  cursor: pointer;
 }
 </style>

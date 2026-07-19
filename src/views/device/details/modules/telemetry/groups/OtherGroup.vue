@@ -7,7 +7,14 @@
     </header>
 
     <div class="group-body">
-      <div v-for="i in items" :key="i.key" class="other-card" :class="metricCardClass(i)">
+      <div
+        v-for="i in items"
+        :key="i.key"
+        class="other-card"
+        :class="[metricCardClass(i), isColor(i) ? '' : 'is-clickable']"
+        :title="isColor(i) ? undefined : '查看趋势'"
+        @click="onCardClick(i)"
+      >
         <div class="other-card__head">
           <div class="other-card__title" :title="i.key">
             <span v-if="i.label" class="other-card__label">{{ i.label }}</span>
@@ -63,6 +70,13 @@ const props = defineProps<{
   metricCardClass: (i: any) => string
   isColor: (i: any) => string
 }>()
+
+const emit = defineEmits<{ (e: 'view-history', item: Item): void }>()
+
+function onCardClick(i: Item) {
+  if (props.isColor(i)) return // 非数值不响应
+  emit('view-history', i)
+}
 
 function formatText(i: Item): string {
   if (i.value == null || i.value === '') return '--'
@@ -164,5 +178,9 @@ function formatText(i: Item): string {
 .other-card__foot {
   font-size: 11px;
   color: #999;
+}
+
+.other-card.is-clickable {
+  cursor: pointer;
 }
 </style>

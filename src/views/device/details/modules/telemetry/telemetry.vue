@@ -1,11 +1,7 @@
 <script setup lang="tsx">
 import { computed, getCurrentInstance, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-import type { NumberAnimationInst } from 'naive-ui'
 import dayjs from 'dayjs'
-import { Activity } from '@vicons/tabler'
-import { DocumentOnePage24Regular } from '@vicons/fluent'
 import { useIntervalFn, useWebSocket } from '@vueuse/core'
-import { MovingNumbers } from 'moving-numbers-vue3'
 import moment from 'moment'
 import TempGroup from './groups/TempGroup.vue'
 import AnalogGroup from './groups/AnalogGroup.vue'
@@ -15,22 +11,17 @@ import CounterGroup from './groups/CounterGroup.vue'
 import OtherGroup from './groups/OtherGroup.vue'
 import {
   expectMessageAdd,
-  getSimulation,
   getTelemetryLogList,
-  sendSimulation,
   telemetryDataCurrent,
-  telemetryDataDel,
   telemetryDataPub
 } from '@/service/api'
 import { localStg } from '@/utils/storage'
-import { deviceDetail } from '@/service/api/device'
 import { $t } from '@/locales'
 import { getWebsocketServerUrl, isJSON } from '@/utils/common/tool'
 import { deviceCustomControlList } from '@/service/api/system-data'
+import { Refresh } from '@vicons/tabler'
 import HistoryData from './modules/history-data.vue'
 import TimeSeriesData from './modules/time-series-data.vue'
-import SparkLine from './modules/SparkLine.vue'
-import { formatRelativeTime } from '@/utils/common/datetime'
 import { useLoading } from '~/packages/hooks'
 const props = defineProps<{
   id: string
@@ -40,13 +31,15 @@ const props = defineProps<{
 let wsUrl = getWebsocketServerUrl()
 wsUrl += '/telemetry/datas/current/ws'
 const showDialog = ref(false)
-const showLogDialog = ref(false)
 const showHistory = ref(false)
 const telemetryId = ref()
 const telemetryKey = ref()
 const telemetryName = ref()
 const telemetryUnit = ref()
 const modelType = ref<string>('')
+// 历史弹窗开启序号:每次 openHistory 自增,作为 modal 子组件的 :key,
+// 强制重挂载以重取数据——覆盖「弹窗已开时切换 key」与「同卡重复点击」两种场景。
+const historySeq = ref(0)
 
 const formValue = ref('')
 const form = reactive({
@@ -59,11 +52,8 @@ const tableData = ref([])
 
 const telemetryData = ref<DeviceManagement.telemetryData[]>([])
 const initTelemetryData = ref<any>()
-const numberAnimationInstRef = ref<NumberAnimationInst[] | []>([])
 const { loading, startLoading, endLoading } = useLoading()
 const total = ref(0)
-const showLog = ref(false)
-const device_order = ref('')
 const operationOptions = [
   { label: $t('custom.device_details.whole'), value: '' },
   { label: $t('custom.device_details.manualOperation'), value: '1' },
@@ -76,10 +66,7 @@ const resultOptions = [
   { label: $t('custom.devicePage.fail'), value: '2' }
   // 其他发送结果选项...
 ]
-const cardMargin = ref(15) // 卡片的间距
 const log_page = ref(1)
-const showError = ref(false)
-const erroMessage = ref('')
 
 const token = localStg.get('token')
 
@@ -164,42 +151,11 @@ const columns = [
     render: row => (row.status === '1' ? $t('custom.devicePage.success') : $t('custom.devicePage.fail'))
   }
 ]
-const requestSimulationList = async () => {
-  const { data, error } = await getSimulation({
-    device_id: props.id
-  })
-  if (!error) {
-    device_order.value = data
-  }
-}
-
 const openDialog = () => {
   showDialog.value = true
   formValue.value = ''
   form.expected = false
   form.time = null
-}
-const openUpLog = () => {
-  showError.value = false
-  showLogDialog.value = true
-  requestSimulationList()
-}
-
-const sendSimulationList = async () => {
-  if (!device_order.value) {
-    window.$message?.error($t('custom.device_details.sendInputData'))
-    return
-  }
-  const { error } = await sendSimulation({
-    command: device_order.value
-  })
-  if (!error) {
-    showLogDialog.value = false
-    showError.value = false
-  } else {
-    showError.value = true
-    erroMessage.value = error?.response?.data?.message
-  }
 }
 const fetchData = async () => {
   startLoading()
@@ -237,60 +193,14 @@ const fetchTelemetry = async () => {
     send(JSON.stringify(dataw))
   }
 }
-const setItemRef = el => {
-  if (el) {
-    const index = el.$attrs['data-index']
-    numberAnimationInstRef.value[index] = el
-  }
-}
-const getDeviceDetail = async () => {
-  const { data, error } = await deviceDetail(props.id)
-  if (!error) {
-    if (data.device_config !== undefined) {
-      if (data.device_config.protocol_type === 'MQTT') {
-        showLog.value = true
-      } else {
-        showLog.value = false
-      }
-    } else {
-      showLog.value = true
-    }
-  }
-}
-getDeviceDetail()
 
-const options = ref([
-  {
-    label: $t('custom.device_details.deleteAttribute'),
-    key: '1'
-  }
-])
-
-const delparam: any = ref({})
-
-const handleDeleteTable = async () => {
-  const { error }: any = await telemetryDataDel(delparam.value)
-
-  if (!error) {
-    fetchTelemetry()
-  }
+/** 手动刷新:重拉最新遥测 + 重发 WS 订阅(顺带自愈断连)+ 刷新日志。
+ *  不引入定时器——WS 已每 ~60s 自动推送,这里只做补漏/自愈。 */
+const refreshData = () => {
+  fetchTelemetry()
+  fetchData()
 }
 
-const handleSelect = (key, item) => {
-  if (String(key) === '1') {
-    delparam.value = {
-      key: item.key,
-      device_id: props.id
-    }
-    handleDeleteTable()
-  }
-}
-const copy = event => {
-  const input = event.target
-  input.select()
-  document.execCommand('copy')
-  window.$message?.success($t('theme.configOperation.copySuccess'))
-}
 const handlePositiveClick = async () => {
   if (isJSON(formValue.value)) {
     let res: any = {}
@@ -318,22 +228,23 @@ const handlePositiveClick = async () => {
   }
 }
 
-const onTapTableTools = (i: any) => {
-  if (typeof i.value === 'number') {
-    modelType.value = $t('custom.device_details.sequential')
-    telemetryKey.value = i.key
-    telemetryName.value = i.label
-    telemetryId.value = i.device_id
-    telemetryUnit.value = i.unit
-    showHistory.value = true
-  }
-}
-
 const isColor = (i: any) => {
   if (typeof i.value !== 'number') {
     return '#cccccc'
   }
   return ''
+}
+
+/** 点数值卡开历史波动图:激活已有但不可达的 showHistory modal,
+ *  modelType 置为时序 i18n 值(必须与 modal v-if 守卫一致,非字面 '时序')。 */
+const openHistory = (item: { key: string; label?: string; unit?: string }) => {
+  telemetryId.value = props.id
+  telemetryKey.value = item.key
+  telemetryName.value = item.label || item.key
+  telemetryUnit.value = item.unit || ''
+  modelType.value = $t('custom.device_details.sequential')
+  historySeq.value++ // 触发 modal 子组件重挂载 → 重取该 key 的历史数据
+  showHistory.value = true
 }
 
 const controlList = ref<any[]>([])
@@ -405,135 +316,6 @@ const inputFeedback = computed(() => {
 })
 
 // ================================================================
-// 遥测值/键格式化（设备详情·遥测 Tab 显示优化）
-// ================================================================
-type FormattedValue = {
-  /** 'json' = 解析后的位/键值对；'hex' = 已分组的 645 原始 hex；'string' = 通用文本；'empty' = 无值 */
-  kind: 'json' | 'hex' | 'string' | 'empty'
-  /** 卡片主显示文本（JSON 位标签渲染时仅作 fallback，hex 时为分组大写） */
-  display: string
-  /** 仅 kind='json' 时存在；按原始 key 顺序、boolean→"开/关" */
-  pairs?: Array<{ key: string; value: string }>
-  /** 原始值字符串，用于 hover tooltip 完整显示 */
-  raw: string
-}
-
-const BIT_LABEL_OF: Record<string, string> = {
-  bit0: '位0',
-  bit1: '位1',
-  bit2: '位2',
-  bit3: '位3',
-  bit4: '位4',
-  bit5: '位5',
-  bit6: '位6',
-  bit7: '位7',
-  bit8: '位8',
-  bit9: '位9',
-  bit10: '位10',
-  bit11: '位11',
-  bit12: '位12',
-  bit13: '位13',
-  bit14: '位14',
-  bit15: '位15'
-}
-
-/**
- * 把后端原始值分类、归一化为卡片友好的显示结构。
- *
- * 设计意图：设备上行可能直接喷 DL/T 645 原始数据（长 hex 串 / JSON 位域 / 字符串），
- * 这里把它们转成"对运维人员一眼能读"的形态；纯数字仍由 MovingNumbers 处理，
- * 此函数仅在被 isColor(i) 判定为非数字时调用，不会冲突。
- */
-function formatTelemetryValue(item: any): FormattedValue {
-  let raw0 = item?.value
-  if (raw0 === null || raw0 === undefined || raw0 === '') {
-    return { kind: 'empty', display: '—', raw: '' }
-  }
-
-  // 0) 字符串若长得像 JSON 对象/数组，先尝试 parse。
-  //    ThingsPanel 后端常将 telemetry 值序列化为 JSON 字符串下发（如 DI 状态
-  //    "{\"bit0\":true,\"bit1\":false,...}"），此时 typeof === 'string'，
-  //    原代码会落到 'string' 分支把整段 JSON 直接喷到卡片，看起来"没解析"。
-  //    这里先 parse 再走下面的对象分支即可识别。
-  if (typeof raw0 === 'string') {
-    const trimmed = raw0.trim()
-    if (
-      trimmed.length > 1 &&
-      ((trimmed.startsWith('{') && trimmed.endsWith('}')) ||
-        (trimmed.startsWith('[') && trimmed.endsWith(']')))
-    ) {
-      try {
-        const parsed = JSON.parse(trimmed)
-        if (parsed !== null && typeof parsed === 'object') {
-          raw0 = parsed
-        }
-      } catch {
-        /* 不是合法 JSON，保持原字符串走通用文本分支 */
-      }
-    }
-  }
-
-  // 1) JSON 对象 / 数组（典型如 DI 状态 {"bit0":true,"bit1":false,...}）
-  if (typeof raw0 === 'object') {
-    let pairs: Array<{ key: string; value: string }> = []
-    let display = ''
-    try {
-      const obj = raw0 as Record<string, unknown>
-      const keys = Object.keys(obj)
-      pairs = keys.map(k => {
-        const val = obj[k]
-        if (typeof val === 'boolean') {
-          return { key: BIT_LABEL_OF[k] || k, value: val ? '开' : '关' }
-        }
-        if (typeof val === 'number') {
-          return { key: BIT_LABEL_OF[k] || k, value: val ? '开' : '关' }
-        }
-        return { key: BIT_LABEL_OF[k] || k, value: String(val) }
-      })
-      display = pairs.map(p => `${p.key} ${p.value}`).join(' · ')
-    } catch {
-      display = String(raw0)
-    }
-    let rawStr = ''
-    try {
-      rawStr = JSON.stringify(raw0)
-    } catch {
-      rawStr = String(raw0)
-    }
-    return { kind: 'json', display, pairs, raw: rawStr }
-  }
-
-  // 2) DL/T 645 原始 hex 串（>=8 位连续 hex，整字节对齐）—— 典型如 raw_data 卡
-  const str = String(raw0).trim()
-  if (/^[0-9a-fA-F]{8,}$/.test(str) && str.length % 2 === 0) {
-    const grouped = (str.match(/.{1,2}/g) || []).join(' ').toUpperCase()
-    return { kind: 'hex', display: grouped, raw: str }
-  }
-
-  // 3) 6 位 hex（裸 DI 值段，如 "0123"）—— 也按 hex 分组
-  if (/^[0-9a-fA-F]{6,}$/.test(str)) {
-    const grouped = (str.match(/.{1,2}/g) || []).join(' ').toUpperCase()
-    return { kind: 'hex', display: grouped, raw: str }
-  }
-
-  // 4) 通用字符串：截断防撑破卡片
-  const display = str.length > 36 ? `${str.slice(0, 33)}…` : str
-  return { kind: 'string', display, raw: str }
-}
-
-/**
- * 卡片标题：友好化显示
- * - 有 label：保留 "label (key)" 原貌
- * - 无 label：把原始 DI 码降级为 "未命名点位 (DI: xxxxxxxx)"，避免把 di_00010202 这类
- *   裸码直接当卡片标题
- */
-function formatTelemetryTitle(item: any): string {
-  if (item?.label) return item.label
-  if (item?.key) return '未命名点位'
-  return ''
-}
-
-// ================================================================
 // 仪表盘风格：sparkline 累积缓冲 + 变化% + 状态徽章 + tick
 // ================================================================
 const SPARK_MAX = 30
@@ -553,34 +335,6 @@ function pushSpark(key: string, value: unknown, ts: number) {
   const next = [...prev, { ts, value }]
   while (next.length > SPARK_MAX) next.shift()
   sparkBuffer.value = { ...sparkBuffer.value, [key]: next }
-}
-
-/**
- * 变化百分比：(latest - oldest) / |oldest| × 100，基于累积窗口首尾。
- * 窗口 < 2 点、oldest===0、或不收敛 → null（不渲染徽章）。
- */
-function deltaPercent(i: any): number | null {
-  const buf = sparkBuffer.value[i.key]
-  if (!buf || buf.length < 2) return null
-  const oldest = buf[0].value
-  const latest = buf[buf.length - 1].value
-  if (!Number.isFinite(oldest) || !Number.isFinite(latest)) return null
-  if (oldest === 0) return null
-  const pct = ((latest - oldest) / Math.abs(oldest)) * 100
-  if (!Number.isFinite(pct)) return null
-  return Math.round(pct * 10) / 10
-}
-
-function deltaClass(i: any): string {
-  const p = deltaPercent(i)
-  if (p === null || p === 0) return 'metric-delta--flat'
-  return p > 0 ? 'metric-delta--up' : 'metric-delta--down'
-}
-
-function deltaArrow(i: any): string {
-  const p = deltaPercent(i)
-  if (p === null || p === 0) return ''
-  return p > 0 ? '↑' : '↓'
 }
 
 // ================================================================
@@ -674,17 +428,61 @@ const groupedTelemetry = computed(() => {
   }
   return groups
 })
+
+// ================================================================
+// 最新刷新时间：取所有遥测项里最大的有效 ts（设备最近一次上报时刻，
+// 即平台本轮 221→231 落库时间）。30s tick 触发相对时间（“N 秒前”）重算。
+// ================================================================
+const latestRefreshMs = computed(() => {
+  void tick.value
+  let latest: number | null = null
+  for (const it of telemetryData.value || []) {
+    if (!it?.ts) continue
+    const t = dayjs(it.ts)
+    if (!t.isValid()) continue
+    const ms = t.valueOf()
+    if (latest === null || ms > latest) latest = ms
+  }
+  return latest
+})
+
+const latestRefreshAbs = computed(() =>
+  latestRefreshMs.value ? dayjs(latestRefreshMs.value).format('YYYY-MM-DD HH:mm:ss') : ''
+)
+
+const latestRefreshRel = computed(() => {
+  const ms = latestRefreshMs.value
+  if (ms === null) return ''
+  const diff = Date.now() - ms
+  if (diff < 0) return '刚刚'
+  if (diff < 60000) return `${Math.floor(diff / 1000)} 秒前`
+  if (diff < 3600000) return `${Math.floor(diff / 60000)} 分钟前`
+  return dayjs(ms).format('HH:mm:ss')
+})
 </script>
 
 <template>
   <n-card class="w-full">
     <!-- 第一行 -->
-    <NFlex justify="space-between">
+    <NFlex justify="space-between" align="center">
       <n-button type="primary" class="mb-4" @click="openDialog">{{ $t('generate.issue-control') }}</n-button>
 
-      <n-button v-if="showLog" type="primary" class="mb-4" @click="openUpLog">
-        {{ $t('generate.simulate-report-data') }}
-      </n-button>
+      <div class="mb-4 top-right">
+        <div class="refresh-time">
+          <span class="refresh-time__label">最新刷新</span>
+          <template v-if="latestRefreshAbs">
+            <span class="refresh-time__abs">{{ latestRefreshAbs }}</span>
+            <span class="refresh-time__rel">{{ latestRefreshRel }}</span>
+          </template>
+          <span v-else class="refresh-time__none">—</span>
+        </div>
+        <n-button class="refresh-btn" :loading="loading" @click="refreshData">
+          <template #icon>
+            <NIcon><Refresh /></NIcon>
+          </template>
+          立即刷新
+        </n-button>
+      </div>
     </NFlex>
 
     <!-- 自定义控制 -->
@@ -699,22 +497,30 @@ const groupedTelemetry = computed(() => {
     </NGrid>
 
     <!-- 第二行：遥测指标卡（按语义分组，业界电力监控 / SCADA 通用分类） -->
-    <TempGroup v-if="groupedTelemetry.temp.length" :items="groupedTelemetry.temp" :spark-buffer="sparkBuffer" />
+    <TempGroup
+      v-if="groupedTelemetry.temp.length"
+      :items="groupedTelemetry.temp"
+      :spark-buffer="sparkBuffer"
+      @view-history="openHistory"
+    />
     <AnalogGroup
       v-if="groupedTelemetry.analog.length"
       :items="groupedTelemetry.analog"
       :spark-buffer="sparkBuffer"
+      @view-history="openHistory"
     />
     <StatusGroup v-if="groupedTelemetry.status.length" :items="groupedTelemetry.status" />
     <EnergyGroup
       v-if="groupedTelemetry.energy.length"
       :items="groupedTelemetry.energy"
       :spark-buffer="sparkBuffer"
+      @view-history="openHistory"
     />
     <CounterGroup
       v-if="groupedTelemetry.counter.length"
       :items="groupedTelemetry.counter"
       :spark-buffer="sparkBuffer"
+      @view-history="openHistory"
     />
     <OtherGroup
       v-if="groupedTelemetry.other.length"
@@ -724,6 +530,7 @@ const groupedTelemetry = computed(() => {
       :status-label="statusLabel"
       :metric-card-class="metricCardClass"
       :is-color="isColor"
+      @view-history="openHistory"
     />
 
     <!-- 第三行 -->
@@ -752,44 +559,6 @@ const groupedTelemetry = computed(() => {
         "
       />
     </div>
-    <n-modal v-model:show="showLogDialog" :title="$t('generate.report-data')" :class="getPlatform ? 'w-90%' : 'w-40%'">
-      <n-card>
-        <n-form>
-          <div class="m-b-20px" :class="getPlatform ? ' flex-col ' : ' flex'">
-            <span class="flex-1">{{ $t('generate.mqtt') }}</span>
-            <span class="flex-1">{{ $t('generate.copy-commands-to-local') }}</span>
-          </div>
-          <div class="flex items-center gap-15px">
-            <n-input v-model:value="device_order" type="textarea" class="flex-1" @click="copy" />
-
-            <n-button type="primary" @click="sendSimulationList">
-              {{ $t('generate.send') }}
-            </n-button>
-          </div>
-          <div v-if="showError" class="w-100% flex" style="border: 2px solid #eee; border-radius: 5px">
-            <SvgIcon
-              local-icon="AlertFilled"
-              style="margin-left: 5px; color: red; margin-right: 5px; margin-top: 5px; margin-bottom: 5px"
-              class="text-20px text-primary"
-            />
-            <span
-              style="
-                display: inline-block;
-                margin-top: 5px;
-                margin-bottom: 5px;
-                width: 300px;
-                wite-space: nowrap;
-                overflow: hidden;
-                overflow: hidden;
-                text-overflow: ellipsis;
-              "
-            >
-              {{ erroMessage }}99999
-            </span>
-          </div>
-        </n-form>
-      </n-card>
-    </n-modal>
     <n-modal v-model:show="showDialog" :class="getPlatform ? 'w-90%' : 'w-40%'">
       <n-card :title="$t('generate.distributeControlToDevice')">
         <n-form label-placement="left">
@@ -850,6 +619,7 @@ const groupedTelemetry = computed(() => {
       <NCard style="width: 80%">
         <HistoryData
           v-if="modelType === $t('custom.device_details.history')"
+          :key="`hist-${historySeq}`"
           :device-id="telemetryId"
           :the-key="telemetryKey"
           :the-name="telemetryName"
@@ -857,6 +627,7 @@ const groupedTelemetry = computed(() => {
         />
         <TimeSeriesData
           v-if="modelType === $t('custom.device_details.sequential')"
+          :key="`seq-${historySeq}`"
           :device-id="telemetryId"
           :the-key="telemetryKey"
           :the-name="telemetryName"
@@ -1177,5 +948,35 @@ const groupedTelemetry = computed(() => {
   &:hover {
     color: rgb(var(--primary-color));
   }
+}
+
+.refresh-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 32px;
+}
+.refresh-time__label {
+  color: #909399;
+}
+.refresh-time__abs {
+  color: #1d2129;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.refresh-time__rel {
+  color: #909399;
+}
+.refresh-time__none {
+  color: #c0c4cc;
+}
+.top-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+.refresh-btn {
+  flex-shrink: 0;
 }
 </style>

@@ -7,7 +7,14 @@
     </header>
 
     <div class="group-body">
-      <div v-for="it in items" :key="it.key" class="energy-card">
+      <div
+        v-for="it in items"
+        :key="it.key"
+        class="energy-card"
+        :class="typeof it.value === 'number' ? 'is-clickable' : ''"
+        :title="typeof it.value === 'number' ? '查看趋势' : undefined"
+        @click="onCardClick(it)"
+      >
         <div class="energy-card__head">
           <span class="energy-card__title">{{ it.label || it.key }}</span>
           <span class="energy-card__trend" :class="trendClass(it)">
@@ -51,6 +58,13 @@ const props = defineProps<{
   items: Item[]
   sparkBuffer: Record<string, Array<{ ts: number; value: number }>>
 }>()
+
+const emit = defineEmits<{ (e: 'view-history', item: Item): void }>()
+
+function onCardClick(it: Item) {
+  if (typeof it.value !== 'number') return
+  emit('view-history', it)
+}
 
 function isMonotonic(it: Item): boolean {
   const buf = props.sparkBuffer[it.key] || []
@@ -200,5 +214,9 @@ function formatNum(v: any): string {
 .energy-card__trend-label {
   color: #d48806;
   font-weight: 500;
+}
+
+.energy-card.is-clickable {
+  cursor: pointer;
 }
 </style>
